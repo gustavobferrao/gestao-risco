@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Blueprint MVP Gestão de Riscos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* Layout: coluna única de leitura (até 1040px), seções numeradas na ordem em que o projeto é construído;
+   diagramas ocupam a largura toda, texto fica em ~68 caracteres. */
+:root {
+  --bg: #f3f5f6;
+  --surface: #ffffff;
+  --ink: #17232d;
+  --muted: #5a6975;
+  --line: #d3dbe0;
+  --accent: #0a6c8c;
+  --accent-soft: #e0eff4;
+  --baixo: #2c8a57;
+  --medio: #a87f00;
+  --alto: #cf5a14;
+  --critico: #b3261e;
+  --display: "Archivo", "Segoe UI", system-ui, sans-serif;
+  --body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f171d; --surface: #17222a; --ink: #e5ecf0; --muted: #98a8b3; --line: #2a3842;
+    --accent: #56bcda; --accent-soft: #133340;
+    --baixo: #5cc48a; --medio: #e0b93a; --alto: #f08a4b; --critico: #f2706a;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f171d; --surface: #17222a; --ink: #e5ecf0; --muted: #98a8b3; --line: #2a3842;
+  --accent: #56bcda; --accent-soft: #133340;
+  --baixo: #5cc48a; --medio: #e0b93a; --alto: #f08a4b; --critico: #f2706a;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.6 var(--body); }
+main { max-width: 1040px; margin: 0 auto; padding: 40px 20px 72px; display: flex; flex-direction: column; gap: 56px; }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; margin: 0; line-height: 1.2; }
+h1 { font-size: 2rem; }
+h2 { font-size: 1.35rem; display: flex; gap: 12px; align-items: baseline; }
+h2 .n { font: 500 0.85rem var(--mono); color: var(--accent); }
+h3 { font-size: 1rem; }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); }
+code, pre { font-family: var(--mono); font-size: 0.85em; }
+code { background: var(--accent-soft); padding: 1px 5px; border-radius: 4px; }
+section { display: flex; flex-direction: column; gap: 18px; }
+header { display: flex; flex-direction: column; gap: 14px; }
+.lede { font-size: 1.08rem; color: var(--muted); }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; padding: 0; margin: 0; list-style: none; }
+.chips li { font: 500 0.8rem var(--mono); border: 1px solid var(--line); background: var(--surface); padding: 4px 10px; border-radius: 999px; }
+figure { margin: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
+.scroll { overflow-x: auto; }
+figure svg { display: block; width: 100%; min-width: 760px; height: auto; color: var(--ink); }
+figcaption { color: var(--muted); font-size: 0.9rem; margin-top: 12px; max-width: 80ch; }
+svg text { font-family: var(--mono); font-size: 11.5px; fill: currentColor; }
+svg .t { font-family: var(--display); font-weight: 700; font-size: 13px; }
+svg .box { fill: var(--surface); stroke: currentColor; stroke-width: 1.2; }
+svg .inner { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 1; }
+svg .hd { fill: var(--accent-soft); }
+svg .ln { fill: none; stroke: currentColor; stroke-width: 1.2; }
+svg .dash { stroke-dasharray: 5 4; }
+svg .novo { fill: var(--alto); font-weight: 500; }
+svg .ln.novo { fill: none; stroke: var(--alto); }
+svg .m { fill: var(--muted); }
+.tbl { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+table { border-collapse: collapse; width: 100%; min-width: 720px; font-size: 0.92rem; }
+th, td { text-align: left; vertical-align: top; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+th { font: 600 0.78rem var(--body); letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
+tr:last-child td { border-bottom: 0; }
+td code { white-space: nowrap; }
+.st { display: inline-block; font: 500 0.75rem var(--mono); padding: 2px 8px; border-radius: 4px; border: 1px solid; white-space: nowrap; }
+.st.ok { color: var(--baixo); } .st.aj { color: var(--alto); } .st.fa { color: var(--critico); }
+.vb { display: inline-block; min-width: 54px; text-align: center; font: 500 0.75rem var(--mono); padding: 2px 6px; border-radius: 4px; color: var(--surface); }
+.vb.get { background: var(--accent); } .vb.post { background: var(--baixo); } .vb.patch { background: var(--alto); }
+.who { font: 500 0.75rem var(--mono); color: var(--muted); white-space: nowrap; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; display: flex; flex-direction: column; gap: 8px; }
+.card ul, .list { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; }
+.card p, .card li { font-size: 0.93rem; }
+.card.cid { border-top: 3px solid var(--accent); } .card.age { border-top: 3px solid var(--alto); }
+.code { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+.code pre { margin: 0; padding: 16px; overflow-x: auto; line-height: 1.5; max-height: 460px; }
+.code button { position: absolute; top: 10px; right: 10px; font: 500 0.78rem var(--body); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 5px 10px; cursor: pointer; }
+.code button:hover { border-color: var(--accent); }
+button:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; counter-reset: s; }
+.steps li { counter-increment: s; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; display: flex; flex-direction: column; gap: 6px; font-size: 0.93rem; }
+.steps li::before { content: "Etapa " counter(s); font: 500 0.78rem var(--mono); color: var(--accent); }
+.steps li.opt::before { content: "Etapa " counter(s) " · se sobrar tempo"; color: var(--muted); }
+.sev { display: flex; flex-wrap: wrap; gap: 8px; }
+.sev span { font: 500 0.75rem var(--mono); padding: 3px 10px; border-radius: 4px; color: var(--surface); }
+footer { color: var(--muted); font-size: 0.85rem; }
+</style>
+</head>
+<body>
+<main>
+
+<header>
+  <h1>Blueprint do MVP de Gestão de Áreas de Risco</h1>
+  <p class="lede">Estrutura do projeto fullstack a partir do banco <code>gestao_riscos</code>: o que cada parte faz, o que o banco já suporta, o que precisa de ajuste e em que ordem construir para caber em um prazo curto.</p>
+  <ul class="chips">
+    <li>MySQL 8</li><li>Java 21</li><li>Spring Boot (Web, Data JPA, Validation)</li><li>springdoc / Swagger UI</li><li>Frontend SPA a definir</li><li>Leaflet + OpenStreetMap</li>
+  </ul>
+</header>
+
+<section>
+  <h2><span class="n">01</span>Arquitetura</h2>
+  <p>Três camadas, um único deploy de API. O mapa, a geolocalização e a rota ficam no navegador, o que tira da API todo o trabalho de cartografia.</p>
+  <figure>
+    <div class="scroll"><svg viewBox="0 0 980 300" role="img" aria-label="Cidadão e agente usam o frontend, que chama a API Spring Boot por REST; a API acessa o MySQL. Mapa, geolocalização e rota são chamados direto pelo navegador.">
+<defs><marker id="seta" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+<rect class="box" x="10" y="40" width="130" height="50" rx="6"/><text class="t" x="75" y="70" text-anchor="middle">Cidadão</text>
+<rect class="box" x="10" y="130" width="130" height="50" rx="6"/><text class="t" x="75" y="160" text-anchor="middle">Agente do órgão</text>
+<line class="ln" x1="140" y1="65" x2="188" y2="65" marker-end="url(#seta)"/>
+<line class="ln" x1="140" y1="155" x2="188" y2="155" marker-end="url(#seta)"/>
+<rect class="box" x="190" y="30" width="180" height="160" rx="6"/>
+<text class="t" x="280" y="58" text-anchor="middle">Frontend (SPA)</text>
+<text x="280" y="90" text-anchor="middle">telas por perfil</text>
+<text x="280" y="112" text-anchor="middle">mapa Leaflet</text>
+<text x="280" y="134" text-anchor="middle">cliente HTTP</text>
+<line class="ln" x1="370" y1="110" x2="458" y2="110" marker-end="url(#seta)"/>
+<text class="m" x="414" y="102" text-anchor="middle">REST / JSON</text>
+<rect class="box" x="460" y="30" width="340" height="160" rx="6"/>
+<text class="t" x="630" y="58" text-anchor="middle">API Spring Boot</text>
+<rect class="inner" x="472" y="84" width="92" height="76" rx="5"/><text class="t" x="518" y="116" text-anchor="middle">Controller</text><text x="518" y="138" text-anchor="middle">rotas + DTO</text>
+<rect class="inner" x="584" y="84" width="92" height="76" rx="5"/><text class="t" x="630" y="116" text-anchor="middle">Service</text><text x="630" y="138" text-anchor="middle">regras</text>
+<rect class="inner" x="696" y="84" width="92" height="76" rx="5"/><text class="t" x="742" y="116" text-anchor="middle">Repository</text><text x="742" y="138" text-anchor="middle">JPA</text>
+<line class="ln" x1="564" y1="122" x2="582" y2="122" marker-end="url(#seta)"/>
+<line class="ln" x1="676" y1="122" x2="694" y2="122" marker-end="url(#seta)"/>
+<line class="ln" x1="800" y1="110" x2="868" y2="110" marker-end="url(#seta)"/>
+<text class="m" x="834" y="102" text-anchor="middle">JDBC</text>
+<rect class="box" x="870" y="60" width="100" height="100" rx="6"/>
+<text class="t" x="920" y="104" text-anchor="middle">MySQL 8</text><text x="920" y="126" text-anchor="middle">gestao_riscos</text>
+<polyline class="ln dash" points="280,190 280,212"/><polyline class="ln dash" points="140,234 140,212 540,212 540,234"/><polyline class="ln dash" points="340,212 340,234"/>
+<rect class="box" x="40" y="236" width="200" height="44" rx="6"/><text x="140" y="262" text-anchor="middle">Geolocalização do navegador</text>
+<rect class="box" x="255" y="236" width="170" height="44" rx="6"/><text x="340" y="262" text-anchor="middle">OpenStreetMap (mapa)</text>
+<rect class="box" x="440" y="236" width="200" height="44" rx="6"/><text x="540" y="262" text-anchor="middle">Google Maps / OSRM (rota)</text>
+</svg></div>
+    <figcaption>A API só fala com o MySQL. Serviços de mapa e rota (linha tracejada) são chamados direto pelo navegador e não exigem chave de API no caso do OpenStreetMap.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2><span class="n">02</span>O que o banco já suporta</h2>
+  <p>Cruzei as cinco funcionalidades que você descreveu com as tabelas do script. Uma funciona como está, duas pedem um ajuste pequeno e duas estão bloqueadas por falta de coluna.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Funcionalidade</th><th>Tabelas</th><th>Situação</th><th>O que falta</th></tr></thead>
+    <tbody>
+      <tr><td>Consultar áreas e seu nível de risco</td><td><code>localidade</code> <code>area_risco</code> <code>endereco_area_risco</code></td><td><span class="st aj">ajuste</span></td><td>Não há coluna de nível de risco nem coordenada para pôr a área no mapa.</td></tr>
+      <tr><td>Histórico de acontecimentos da área</td><td><code>evento_area_risco</code> <code>evento_climatico</code> <code>alerta_area_risco</code></td><td><span class="st fa">bloqueio</span></td><td>A chave primária <code>(evento, área)</code> impede registrar a segunda enchente na mesma área. Do jeito atual, não é um histórico.</td></tr>
+      <tr><td>Órgão emite alerta para áreas</td><td><code>alerta</code> <code>alerta_area_risco</code> <code>orgao_responsavel</code></td><td><span class="st aj">ajuste</span></td><td>Os dados estão prontos. Falta saber quem está logado: <code>usuario</code> não tem perfil nem vínculo com órgão.</td></tr>
+      <tr><td>Abrigos próximos e rota</td><td><code>abrigo</code> <code>gestao_abrigo</code></td><td><span class="st fa">bloqueio</span></td><td><code>abrigo</code> só tem endereço em texto. Sem latitude e longitude não dá para calcular distância.</td></tr>
+      <tr><td>Solicitar socorro</td><td><code>pedido_ajuda</code> <code>usuario</code></td><td><span class="st ok">pronto</span></td><td>Funciona. Sugestão: tornar a área opcional, porque quem pede ajuda pode estar fora de uma área cadastrada.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <h2><span class="n">03</span>Modelo de dados com os ajustes</h2>
+  <figure>
+    <div class="scroll"><svg viewBox="0 0 990 464" role="img" aria-label="Diagrama das 12 tabelas do banco gestao_riscos e suas relações, com as colunas novas destacadas">
+<polyline class="ln" points="95,114 95,180"/>
+<polyline class="ln" points="95,284 95,350"/>
+<polyline class="ln" points="180,232 210,232"/>
+<polyline class="ln" points="380,232 410,232"/>
+<polyline class="ln" points="580,232 695,232 695,114"/>
+<polyline class="ln" points="780,62 810,62"/>
+<polyline class="ln" points="895,114 895,180"/>
+<polyline class="ln novo dash" points="580,62 610,62"/>
+<polyline class="ln" points="380,62 410,62"/>
+<polyline class="ln" points="150,180 150,147 260,147 260,114"/>
+<polyline class="ln" points="150,284 150,317 260,317 260,350"/>
+<polyline class="ln" points="380,402 410,402"/>
+<rect class="box" x="10" y="10" width="170" height="104" rx="6"/>
+<path class="hd" d="M11,36 v-19 a6,6 0 0 1 6,-6 h156 a6,6 0 0 1 6,6 v19 z"/>
+<line class="ln" x1="10" y1="36" x2="180" y2="36"/>
+<text class="t" x="20" y="28">localidade</text>
+<text x="20" y="54">id_localidade PK</text>
+<text x="20" y="71">nome</text>
+<text x="20" y="88">populacao, area</text>
+<rect class="box" x="210" y="10" width="170" height="104" rx="6"/>
+<path class="hd" d="M211,36 v-19 a6,6 0 0 1 6,-6 h156 a6,6 0 0 1 6,6 v19 z"/>
+<line class="ln" x1="210" y1="36" x2="380" y2="36"/>
+<text class="t" x="220" y="28">pedido_ajuda</text>
+<text x="220" y="54">id_pedido PK</text>
+<text x="220" y="71">fk_id_usuario</text>
+<text class="novo" x="220" y="88">fk_id_area_risco NULL</text>
+<text x="220" y="105">status, lat, long</text>
+<rect class="box" x="410" y="10" width="170" height="104" rx="6"/>
+<path class="hd" d="M411,36 v-19 a6,6 0 0 1 6,-6 h156 a6,6 0 0 1 6,6 v19 z"/>
+<line class="ln" x1="410" y1="36" x2="580" y2="36"/>
+<text class="t" x="420" y="28">usuario</text>
+<text x="420" y="54">id_usuario PK</text>
+<text x="420" y="71">cpf, email, senha_hash</text>
+<text class="novo" x="420" y="88">+ perfil</text>
+<text class="novo" x="420" y="105">+ fk_id_orgao</text>
+<rect class="box" x="610" y="10" width="170" height="104" rx="6"/>
+<path class="hd" d="M611,36 v-19 a6,6 0 0 1 6,-6 h156 a6,6 0 0 1 6,6 v19 z"/>
+<line class="ln" x1="610" y1="36" x2="780" y2="36"/>
+<text class="t" x="620" y="28">orgao_responsavel</text>
+<text x="620" y="54">id_orgao PK</text>
+<text x="620" y="71">nome, cnpj, telefone</text>
+<rect class="box" x="810" y="10" width="170" height="104" rx="6"/>
+<path class="hd" d="M811,36 v-19 a6,6 0 0 1 6,-6 h156 a6,6 0 0 1 6,6 v19 z"/>
+<line class="ln" x1="810" y1="36" x2="980" y2="36"/>
+<text class="t" x="820" y="28">gestao_abrigo</text>
+<text x="820" y="54">fk_id_orgao PK</text>
+<text x="820" y="71">fk_id_abrigo PK</text>
+<text x="820" y="88">data_inicio_gestao</text>
+<rect class="box" x="10" y="180" width="170" height="104" rx="6"/>
+<path class="hd" d="M11,206 v-19 a6,6 0 0 1 6,-6 h156 a6,6 0 0 1 6,6 v19 z"/>
+<line class="ln" x1="10" y1="206" x2="180" y2="206"/>
+<text class="t" x="20" y="198">area_risco</text>
+<text x="20" y="224">id_area_risco PK</text>
+<text x="20" y="241">fk_id_localidade</text>
+<text x="20" y="258">nome, zona, populacao</text>
+<text class="novo" x="20" y="275">+ nivel_risco, lat, lng</text>
+<rect class="box" x="210" y="180" width="170" height="104" rx="6"/>
+<path class="hd" d="M211,206 v-19 a6,6 0 0 1 6,-6 h156 a6,6 0 0 1 6,6 v19 z"/>
+<line class="ln" x1="210" y1="206" x2="380" y2="206"/>
+<text class="t" x="220" y="198">alerta_area_risco</text>
+<text x="220" y="224">fk_id_alerta PK</text>
+<text x="220" y="241">fk_id_area_risco PK</text>
+<rect class="box" x="410" y="180" width="170" height="104" rx="6"/>
+<path class="hd" d="M411,206 v-19 a6,6 0 0 1 6,-6 h156 a6,6 0 0 1 6,6 v19 z"/>
+<line class="ln" x1="410" y1="206" x2="580" y2="206"/>
+<text class="t" x="420" y="198">alerta</text>
+<text x="420" y="224">id_alerta PK</text>
+<text x="420" y="241">fk_id_orgao</text>
+<text x="420" y="258">tipo, nivel_severidade</text>
+<text x="420" y="275">status, data_emissao</text>
+<rect class="box" x="810" y="180" width="170" height="104" rx="6"/>
+<path class="hd" d="M811,206 v-19 a6,6 0 0 1 6,-6 h156 a6,6 0 0 1 6,6 v19 z"/>
+<line class="ln" x1="810" y1="206" x2="980" y2="206"/>
+<text class="t" x="820" y="198">abrigo</text>
+<text x="820" y="224">id_abrigo PK</text>
+<text x="820" y="241">capacidade, vagas</text>
+<text x="820" y="258">endereço, telefone</text>
+<text class="novo" x="820" y="275">+ latitude, longitude</text>
+<rect class="box" x="10" y="350" width="170" height="104" rx="6"/>
+<path class="hd" d="M11,376 v-19 a6,6 0 0 1 6,-6 h156 a6,6 0 0 1 6,6 v19 z"/>
+<line class="ln" x1="10" y1="376" x2="180" y2="376"/>
+<text class="t" x="20" y="368">endereco_area_risco</text>
+<text x="20" y="394">id_endereco PK</text>
+<text x="20" y="411">fk_id_area_risco</text>
+<text x="20" y="428">logradouro, bairro, cep</text>
+<rect class="box" x="210" y="350" width="170" height="104" rx="6"/>
+<path class="hd" d="M211,376 v-19 a6,6 0 0 1 6,-6 h156 a6,6 0 0 1 6,6 v19 z"/>
+<line class="ln" x1="210" y1="376" x2="380" y2="376"/>
+<text class="t" x="220" y="368">evento_area_risco</text>
+<text class="novo" x="220" y="394">+ id_ocorrencia PK</text>
+<text x="220" y="411">fk_id_evento</text>
+<text x="220" y="428">fk_id_area_risco</text>
+<text x="220" y="445">data_ocorrencia</text>
+<rect class="box" x="410" y="350" width="170" height="104" rx="6"/>
+<path class="hd" d="M411,376 v-19 a6,6 0 0 1 6,-6 h156 a6,6 0 0 1 6,6 v19 z"/>
+<line class="ln" x1="410" y1="376" x2="580" y2="376"/>
+<text class="t" x="420" y="368">evento_climatico</text>
+<text x="420" y="394">id_evento_climatico PK</text>
+<text x="420" y="411">nome, classificacao</text>
+</svg></div>
+    <figcaption>As 12 tabelas do seu script. Em laranja, o que o script de ajustes acrescenta: nível e coordenadas na área, coordenadas no abrigo, id próprio na ocorrência de evento, perfil e órgão no usuário.</figcaption>
+  </figure>
+  <p>O script abaixo aplica os cinco ajustes e preenche as novas colunas nos dados de teste. Não consegui executá-lo contra um MySQL neste ambiente, então rode em uma cópia primeiro. As coordenadas são aproximadas.</p>
+  <div class="code"><button type="button" id="copiar">Copiar SQL</button><pre id="sql">-- =====================================================================
+-- AJUSTES PARA O MVP — gestao_riscos
+-- Executar depois do schema e dos dados de teste originais.
+-- Coordenadas abaixo são APROXIMADAS e servem apenas para testes.
+-- =====================================================================
+USE gestao_riscos;
+
+-- 1. AREA_RISCO: nível de risco (consulta &quot;baixo/alto&quot;) e ponto central (mapa)
+ALTER TABLE area_risco
+    ADD COLUMN nivel_risco VARCHAR(10) NOT NULL DEFAULT &#x27;MEDIO&#x27; COMMENT &#x27;Classificação da área: BAIXO, MEDIO, ALTO&#x27;,
+    ADD COLUMN latitude DECIMAL(9,6) NULL COMMENT &#x27;Latitude do ponto central (WGS84)&#x27;,
+    ADD COLUMN longitude DECIMAL(9,6) NULL COMMENT &#x27;Longitude do ponto central (WGS84)&#x27;,
+    ADD CONSTRAINT ck_area_risco_nivel CHECK (nivel_risco IN (&#x27;BAIXO&#x27;, &#x27;MEDIO&#x27;, &#x27;ALTO&#x27;)),
+    ADD CONSTRAINT ck_area_risco_coordenadas CHECK ((latitude IS NULL) = (longitude IS NULL));
+
+-- 2. ABRIGO: coordenadas (sem elas não existe &quot;abrigo mais próximo&quot;)
+ALTER TABLE abrigo
+    ADD COLUMN latitude DECIMAL(9,6) NULL COMMENT &#x27;Latitude (WGS84)&#x27;,
+    ADD COLUMN longitude DECIMAL(9,6) NULL COMMENT &#x27;Longitude (WGS84)&#x27;,
+    ADD CONSTRAINT ck_abrigo_coordenadas CHECK ((latitude IS NULL) = (longitude IS NULL));
+
+-- 3. EVENTO_AREA_RISCO: a PK (evento, área) impede registrar a segunda
+--    enchente na mesma área. Com id próprio, a tabela vira um histórico.
+ALTER TABLE evento_area_risco
+    DROP PRIMARY KEY,
+    ADD COLUMN id_ocorrencia INT NOT NULL AUTO_INCREMENT FIRST,
+    ADD CONSTRAINT pk_evento_area_risco PRIMARY KEY (id_ocorrencia),
+    ADD INDEX ix_ear_evento (fk_id_evento);
+
+-- 4. USUARIO: perfil e vínculo com órgão (quem pode emitir alerta)
+--    Regra &quot;AGENTE precisa ter órgão&quot; fica no service: o MySQL não aceita
+--    CHECK sobre coluna de FK com ação referencial.
+ALTER TABLE usuario
+    ADD COLUMN perfil VARCHAR(10) NOT NULL DEFAULT &#x27;CIDADAO&#x27; COMMENT &#x27;CIDADAO ou AGENTE&#x27;,
+    ADD COLUMN fk_id_orgao INT NULL COMMENT &#x27;Órgão do agente (NULL para cidadão)&#x27;,
+    ADD CONSTRAINT ck_usuario_perfil CHECK (perfil IN (&#x27;CIDADAO&#x27;, &#x27;AGENTE&#x27;)),
+    ADD CONSTRAINT fk_usuario_orgao FOREIGN KEY (fk_id_orgao)
+        REFERENCES orgao_responsavel (id_orgao) ON UPDATE CASCADE ON DELETE RESTRICT;
+
+-- 5. PEDIDO_AJUDA: quem pede socorro pode estar fora de uma área cadastrada
+ALTER TABLE pedido_ajuda
+    MODIFY fk_id_area_risco INT NULL COMMENT &#x27;Área de risco de origem (NULL se fora de área cadastrada)&#x27;;
+
+-- ---------------------------------------------------------------------
+-- DADOS DE TESTE PARA AS NOVAS COLUNAS
+-- ---------------------------------------------------------------------
+START TRANSACTION;
+
+UPDATE area_risco SET nivel_risco = &#x27;ALTO&#x27;,  latitude = -23.704500, longitude = -46.783200 WHERE id_area_risco = 1;
+UPDATE area_risco SET nivel_risco = &#x27;MEDIO&#x27;, latitude = -23.498100, longitude = -46.444900 WHERE id_area_risco = 2;
+UPDATE area_risco SET nivel_risco = &#x27;ALTO&#x27;,  latitude = -23.931600, longitude = -46.338900 WHERE id_area_risco = 3;
+UPDATE area_risco SET nivel_risco = &#x27;MEDIO&#x27;, latitude = -23.980000, longitude = -46.260000 WHERE id_area_risco = 4;
+UPDATE area_risco SET nivel_risco = &#x27;ALTO&#x27;,  latitude = -23.773000, longitude = -45.678400 WHERE id_area_risco = 5;
+UPDATE area_risco SET nivel_risco = &#x27;BAIXO&#x27;, latitude = -23.358600, longitude = -44.893100 WHERE id_area_risco = 6;
+UPDATE area_risco SET nivel_risco = &#x27;MEDIO&#x27;, latitude = -23.330200, longitude = -46.727800 WHERE id_area_risco = 7;
+UPDATE area_risco SET nivel_risco = &#x27;MEDIO&#x27;, latitude = -23.884300, longitude = -46.425600 WHERE id_area_risco = 8;
+UPDATE area_risco SET nivel_risco = &#x27;ALTO&#x27;,  latitude = -22.509900, longitude = -43.183500 WHERE id_area_risco = 9;
+UPDATE area_risco SET nivel_risco = &#x27;BAIXO&#x27;, latitude = -26.900000, longitude = -49.070000 WHERE id_area_risco = 10;
+
+UPDATE abrigo SET latitude = -23.700000, longitude = -46.775000 WHERE id_abrigo = 1;
+UPDATE abrigo SET latitude = -23.550500, longitude = -46.633300 WHERE id_abrigo = 2;
+UPDATE abrigo SET latitude = -23.936000, longitude = -46.335000 WHERE id_abrigo = 3;
+UPDATE abrigo SET latitude = -23.470000, longitude = -46.700000 WHERE id_abrigo = 4;
+UPDATE abrigo SET latitude = -23.985000, longitude = -46.225000 WHERE id_abrigo = 5;
+UPDATE abrigo SET latitude = -23.776000, longitude = -45.690000 WHERE id_abrigo = 6;
+UPDATE abrigo SET latitude = -23.452000, longitude = -45.068000 WHERE id_abrigo = 7;
+UPDATE abrigo SET latitude = -23.325000, longitude = -46.730000 WHERE id_abrigo = 8;
+UPDATE abrigo SET latitude = -23.890000, longitude = -46.420000 WHERE id_abrigo = 9;
+UPDATE abrigo SET latitude = -23.561000, longitude = -46.656000 WHERE id_abrigo = 10;
+
+-- Um agente de teste, vinculado à Defesa Civil de São Paulo
+UPDATE usuario SET perfil = &#x27;AGENTE&#x27;, fk_id_orgao = 1 WHERE id_usuario = 1;
+
+COMMIT;
+
+-- ---------------------------------------------------------------------
+-- CONSULTA DE REFERÊNCIA: abrigos com vaga mais próximos de um ponto
+-- (vira uma @Query nativa no AbrigoRepository)
+-- ---------------------------------------------------------------------
+SELECT a.id_abrigo, a.nome, a.vagas_disponiveis,
+       ROUND(ST_Distance_Sphere(POINT(a.longitude, a.latitude),
+                                POINT(-46.633300, -23.550500)) / 1000, 1) AS distancia_km
+FROM abrigo a
+WHERE a.latitude IS NOT NULL
+  AND a.vagas_disponiveis &gt; 0
+ORDER BY distancia_km
+LIMIT 5;
+</pre></div>
+</section>
+
+<section>
+  <h2><span class="n">04</span>Estrutura de pastas</h2>
+  <p>Um repositório só, organizado por camada no backend. Para um MVP com cinco recursos, é o formato mais rápido de navegar e de explicar em uma apresentação.</p>
+  <div class="code"><pre>gestao-riscos/
+├── docker-compose.yml              # MySQL 8 local
+├── database/
+│   ├── 01_schema.sql               # seu DDL
+│   ├── 02_seed.sql                 # seus dados de teste
+│   └── 03_ajustes_mvp.sql          # ajustes da seção 03
+├── backend/
+│   ├── pom.xml
+│   └── src/main/
+│       ├── resources/application.yml
+│       └── java/br/com/gestaoriscos/
+│           ├── GestaoRiscosApplication.java
+│           ├── config/             # CorsConfig, OpenApiConfig, (SecurityConfig)
+│           ├── model/              # entidades JPA
+│           │   └── enums/          # Zona, NivelRisco, Severidade, StatusAlerta, StatusPedido, Perfil
+│           ├── repository/         # interfaces JpaRepository
+│           ├── dto/                # records de entrada e saída
+│           ├── service/            # AreaRisco, Alerta, Abrigo, PedidoAjuda, Auth
+│           ├── controller/         # um por recurso
+│           └── exception/          # GlobalExceptionHandler (@RestControllerAdvice)
+└── frontend/
+    └── src/
+        ├── api/                    # cliente HTTP, um arquivo por recurso
+        ├── pages/                  # uma por tela
+        └── components/             # Mapa, CartaoArea, SeloSeveridade, LinhaDoTempo</pre></div>
+  <div class="grid">
+    <div class="card"><h3>Mapeamento JPA</h3><ul>
+      <li>11 entidades: as 9 tabelas com id, mais <code>GestaoAbrigo</code> e <code>OcorrenciaEvento</code> (a <code>evento_area_risco</code> com id próprio).</li>
+      <li><code>alerta_area_risco</code> não vira entidade: é um <code>@ManyToMany</code> dentro de <code>Alerta</code>.</li>
+      <li>Colunas com CHECK de lista viram enum com <code>@Enumerated(EnumType.STRING)</code>.</li>
+    </ul></div>
+    <div class="card"><h3>Configuração</h3><ul>
+      <li><code>spring.jpa.hibernate.ddl-auto=none</code>. O SQL é a fonte da verdade, o Hibernate não cria nem altera nada.</li>
+      <li>Se preferir <code>validate</code>, as colunas <code>CHAR</code> (cpf, cnpj, cep) precisam de <code>columnDefinition</code> na entidade.</li>
+      <li>CORS liberado para a origem do frontend em <code>CorsConfig</code>.</li>
+    </ul></div>
+    <div class="card"><h3>Regras que ficam no service</h3><ul>
+      <li>Só agente emite alerta, e sempre em nome do próprio órgão.</li>
+      <li>Alerta nasce <code>ATIVO</code> com pelo menos uma área.</li>
+      <li>Pedido sem área informada recebe a área cadastrada mais próxima, se houver uma a poucos km.</li>
+      <li>Vagas nunca passam da capacidade (o CHECK do banco já barra, o service devolve um erro legível).</li>
+    </ul></div>
+  </div>
+</section>
+
+<section>
+  <h2><span class="n">05</span>Endpoints da API</h2>
+  <p>Dezesseis rotas cobrem o fluxo inteiro. O Swagger UI do springdoc serve de documentação e de ferramenta de teste antes de o frontend existir.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Método</th><th>Rota</th><th>O que faz</th><th>Quem usa</th></tr></thead>
+    <tbody>
+      <tr><td><span class="vb get">GET</span></td><td><code>/api/areas-risco?localidadeId=&amp;nivel=&amp;zona=</code></td><td>Lista áreas com nível de risco e quantidade de alertas ativos</td><td class="who">público</td></tr>
+      <tr><td><span class="vb get">GET</span></td><td><code>/api/areas-risco/{id}</code></td><td>Detalhe da área com endereços e alertas ativos</td><td class="who">público</td></tr>
+      <tr><td><span class="vb get">GET</span></td><td><code>/api/areas-risco/{id}/historico</code></td><td>Linha do tempo: eventos ocorridos e alertas emitidos, por data</td><td class="who">público</td></tr>
+      <tr><td><span class="vb get">GET</span></td><td><code>/api/localidades</code></td><td>Lista para o filtro de localidade</td><td class="who">público</td></tr>
+      <tr><td><span class="vb get">GET</span></td><td><code>/api/eventos-climaticos</code></td><td>Catálogo para os formulários do agente</td><td class="who">público</td></tr>
+      <tr><td><span class="vb get">GET</span></td><td><code>/api/alertas?status=ATIVO&amp;areaId=</code></td><td>Alertas em vigor. O frontend consulta a cada 30 a 60 s</td><td class="who">público</td></tr>
+      <tr><td><span class="vb get">GET</span></td><td><code>/api/abrigos/proximos?lat=&amp;lng=&amp;limite=5</code></td><td>Abrigos com vaga, ordenados por distância</td><td class="who">público</td></tr>
+      <tr><td><span class="vb post">POST</span></td><td><code>/api/auth/cadastro</code></td><td>Cria cidadão, grava a senha com BCrypt</td><td class="who">público</td></tr>
+      <tr><td><span class="vb post">POST</span></td><td><code>/api/auth/login</code></td><td>Devolve usuário, perfil e órgão (e o token, quando houver JWT)</td><td class="who">público</td></tr>
+      <tr><td><span class="vb post">POST</span></td><td><code>/api/pedidos-ajuda</code></td><td>Abre pedido com descrição e coordenadas</td><td class="who">cidadão</td></tr>
+      <tr><td><span class="vb get">GET</span></td><td><code>/api/pedidos-ajuda/meus</code></td><td>Pedidos do usuário e a situação de cada um</td><td class="who">cidadão</td></tr>
+      <tr><td><span class="vb post">POST</span></td><td><code>/api/alertas</code></td><td>Emite alerta para uma ou mais áreas</td><td class="who">agente</td></tr>
+      <tr><td><span class="vb patch">PATCH</span></td><td><code>/api/alertas/{id}/status</code></td><td>Encerra ou cancela alerta</td><td class="who">agente</td></tr>
+      <tr><td><span class="vb post">POST</span></td><td><code>/api/areas-risco/{id}/ocorrencias</code></td><td>Registra evento climático ocorrido na área</td><td class="who">agente</td></tr>
+      <tr><td><span class="vb get">GET</span></td><td><code>/api/pedidos-ajuda?status=ABERTO</code></td><td>Fila de pedidos para atendimento</td><td class="who">agente</td></tr>
+      <tr><td><span class="vb patch">PATCH</span></td><td><code>/api/pedidos-ajuda/{id}/status</code></td><td>Move o pedido para em atendimento ou concluído</td><td class="who">agente</td></tr>
+    </tbody>
+  </table></div>
+  <div class="code"><pre>// POST /api/alertas
+{ &quot;tipo&quot;: &quot;Risco de deslizamento&quot;, &quot;nivelSeveridade&quot;: &quot;CRITICO&quot;, &quot;areasRiscoIds&quot;: [1, 3] }
+
+// POST /api/pedidos-ajuda
+{ &quot;descricao&quot;: &quot;Água subindo rápido na rua&quot;, &quot;latitude&quot;: -23.330210, &quot;longitude&quot;: -46.727780 }
+
+// GET /api/abrigos/proximos?lat=-23.55&amp;lng=-46.63  (um item da resposta)
+{ &quot;id&quot;: 2, &quot;nome&quot;: &quot;Abrigo Ginásio Municipal Central&quot;, &quot;vagasDisponiveis&quot;: 350,
+  &quot;telefone&quot;: &quot;1131000102&quot;, &quot;latitude&quot;: -23.5505, &quot;longitude&quot;: -46.6333, &quot;distanciaKm&quot;: 0.4 }</pre></div>
+</section>
+
+<section>
+  <h2><span class="n">06</span>Telas do frontend</h2>
+  <p>A divisão vale para qualquer tecnologia. Se ainda não houver preferência, React com Vite e react-leaflet é o caminho com mais exemplos prontos para mapa. Angular atende igual se a equipe já conhece.</p>
+  <div class="grid">
+    <div class="card cid"><h3>Cidadão</h3><ul>
+      <li><strong>Mapa de áreas</strong>: marcadores coloridos pelo nível de risco, faixa no topo quando há alerta ativo.</li>
+      <li><strong>Detalhe da área</strong>: descrição, endereços, alertas em vigor e linha do tempo do histórico.</li>
+      <li><strong>Abrigos próximos</strong>: pede a localização, lista por distância com vagas, botão de rota.</li>
+      <li><strong>Pedir socorro</strong>: descrição curta, localização capturada automaticamente, um toque para enviar.</li>
+      <li><strong>Meus pedidos</strong>: situação de cada solicitação.</li>
+    </ul></div>
+    <div class="card age"><h3>Agente do órgão</h3><ul>
+      <li><strong>Emitir alerta</strong>: tipo, severidade, seleção de áreas.</li>
+      <li><strong>Alertas do órgão</strong>: encerrar ou cancelar.</li>
+      <li><strong>Fila de pedidos</strong>: abertos primeiro, com ponto no mapa e telefone do solicitante.</li>
+      <li><strong>Registrar ocorrência</strong>: evento, área, data e hora.</li>
+    </ul></div>
+    <div class="card"><h3>Rota até o abrigo</h3>
+      <p>Mais simples: um link que abre o Google Maps com origem e destino preenchidos, sem chave de API.</p>
+      <p><code>google.com/maps/dir/?api=1&amp;origin=LAT,LNG&amp;destination=LAT,LNG</code></p>
+      <p>Mais completo: desenhar a rota no próprio Leaflet com o servidor público de demonstração do OSRM. Serve para apresentação, não para produção.</p>
+      <h3>Severidade na interface</h3>
+      <div class="sev"><span style="background:var(--baixo)">BAIXO</span><span style="background:var(--medio)">MEDIO</span><span style="background:var(--alto)">ALTO</span><span style="background:var(--critico)">CRITICO</span></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2><span class="n">07</span>Ordem de construção</h2>
+  <p>Cada etapa termina com algo demonstrável. Se o prazo apertar, as três primeiras já formam um MVP.</p>
+  <ol class="steps">
+    <li><strong>Banco e leitura</strong>Aplicar os ajustes, criar o projeto no Spring Initializr, mapear entidades e entregar os GET de áreas, histórico e alertas. Testar pelo Swagger.</li>
+    <li><strong>Ações</strong>Abrigos próximos, abrir pedido de ajuda, emitir e encerrar alerta. Login simples que devolve o perfil, sem token.</li>
+    <li><strong>Frontend do cidadão</strong>Mapa, detalhe com histórico, abrigos com link de rota, pedir socorro.</li>
+    <li><strong>Painel do agente</strong>Emitir alerta, fila de pedidos, registrar ocorrência.</li>
+    <li class="opt"><strong>Acabamento</strong>JWT com Spring Security, rota desenhada no mapa, Docker Compose com API e banco.</li>
+  </ol>
+</section>
+
+<section>
+  <h2><span class="n">08</span>Observações e ideias</h2>
+  <div class="grid">
+    <div class="card"><h3>Sobre o script atual</h3><ul>
+      <li>Separe em <code>01_schema.sql</code> e <code>02_seed.sql</code>. O comentário do seed já cita um arquivo de DDL separado.</li>
+      <li><code>DROP DATABASE</code> no topo é prático no protótipo e perigoso depois que houver dados reais.</li>
+      <li>O SELECT final junta pedidos, alertas e abrigos sem relação entre si, então multiplica linhas. Serve como demonstração de JOIN, não como base de endpoint.</li>
+      <li>Os índices só de coluna de FK são dispensáveis: o InnoDB já cria um para cada FK.</li>
+    </ul></div>
+    <div class="card"><h3>Decisões para alinhar</h3><ul>
+      <li><strong>Envio de alertas</strong>: no MVP o app consulta alertas ativos periodicamente. Notificação de verdade (push, SMS, e-mail) fica para depois.</li>
+      <li><strong>Autenticação</strong>: login sem token entrega rápido, mas qualquer um chama a API como agente. Aceitável em demonstração, não em uso real.</li>
+      <li><strong>Nível de risco</strong>: coluna fixa na área é o mais simples. Alternativa é calcular a partir dos alertas ativos e da frequência de eventos.</li>
+    </ul></div>
+    <div class="card"><h3>Depois do MVP</h3><ul>
+      <li>Área como polígono (<code>GEOMETRY</code> com índice espacial) para saber se o usuário está dentro dela.</li>
+      <li>Check-in no abrigo em vez de contador de vagas editado à mão.</li>
+      <li>Órgão atendente e histórico de status no pedido de ajuda.</li>
+      <li>Alertas alimentados por fontes oficiais como INMET e CEMADEN.</li>
+      <li>Flyway para versionar o banco, PWA para funcionar com sinal ruim.</li>
+    </ul></div>
+  </div>
+</section>
+
+<footer>Gerado a partir de Gest_o_risco.sql. Os ajustes de banco são propostas e não foram executados em um MySQL.</footer>
+</main>
+<script>
+document.getElementById('copiar').addEventListener('click', async function () {
+  var b = this;
+  try { await navigator.clipboard.writeText(document.getElementById('sql').textContent); b.textContent = 'Copiado'; }
+  catch (e) { b.textContent = 'Selecione e copie manualmente'; }
+  setTimeout(function () { b.textContent = 'Copiar SQL'; }, 2000);
+});
+</script>
+</body>
+</html>
