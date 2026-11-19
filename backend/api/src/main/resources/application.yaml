@@ -9,3 +9,12 @@ spring:
     url: ${DB_URL}
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
+  
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+  
+app:
+  cors:
+    allowed-origins: http://localhost:5173

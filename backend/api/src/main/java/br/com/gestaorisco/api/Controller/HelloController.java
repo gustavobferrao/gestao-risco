@@ -1,4 +1,4 @@
-package br.com.gestaorisco.api.Controller;
+package br.com.gestaorisco.api.controller;
 
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.GetMapping;
