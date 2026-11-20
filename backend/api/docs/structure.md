@@ -274,3 +274,10 @@ Cada etapa termina com algo demonstrável. Se o prazo apertar, as três primeira
 - Flyway para versionar o banco, PWA para funcionar com sinal ruim.
 
 Gerado a partir de Gest_o_risco.sql. Os ajustes de banco são propostas e não foram executados em um MySQL.
+
+# Full path of requests:
+JSON body ──► AlertaRequest ──@Valid──► Controller ──► AlertaService.emitir()
+                                                          │ builds Alerta entity
+                                                          │ save()
+                                                          ▼
+JSON reply ◄── AlertaResponse ◄── AlertaResponse.from(alerta)
