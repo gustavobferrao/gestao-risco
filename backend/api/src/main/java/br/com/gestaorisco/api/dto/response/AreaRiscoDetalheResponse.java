@@ -7,7 +7,7 @@ import br.com.gestaorisco.api.model.AreaRisco;
 import br.com.gestaorisco.api.model.enums.NivelRisco;
 import br.com.gestaorisco.api.model.enums.Zona;
 
-/** Detalhe de uma área: dados completos, endereços e histórico de ocorrências. */
+/** Detalhe de uma área: dados completos, endereços, alertas ativos e histórico de ocorrências. */
 public record AreaRiscoDetalheResponse(
         Integer id,
         String nome,
@@ -19,10 +19,14 @@ public record AreaRiscoDetalheResponse(
         BigDecimal longitude,
         LocalidadeResponse localidade,
         List<EnderecoResponse> enderecos,
+        List<AlertaResponse> alertasAtivos,
         List<HistoricoItemResponse> historico) {
 
     /** Espera localidade e endereços já carregados (AreaRiscoRepository.buscarDetalhe). */
-    public static AreaRiscoDetalheResponse from(AreaRisco a, List<HistoricoItemResponse> historico) {
+    public static AreaRiscoDetalheResponse from(
+            AreaRisco a,
+            List<AlertaResponse> alertasAtivos,
+            List<HistoricoItemResponse> historico) {
         return new AreaRiscoDetalheResponse(
                 a.getId(),
                 a.getNome(),
@@ -34,6 +38,7 @@ public record AreaRiscoDetalheResponse(
                 a.getLongitude(),
                 LocalidadeResponse.from(a.getLocalidade()),
                 a.getEnderecos().stream().map(EnderecoResponse::from).toList(),
+                List.copyOf(alertasAtivos),
                 List.copyOf(historico));
     }
 }

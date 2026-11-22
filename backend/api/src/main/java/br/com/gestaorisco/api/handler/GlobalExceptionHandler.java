@@ -29,32 +29,40 @@ public class GlobalExceptionHandler {
             "Erro inesperado no servidor. Tente novamente.");
     }
 
+    // Exceções de domínio carregam mensagens escritas para o usuário final: repassa a mensagem
+    // da exceção e usa o texto genérico só quando ela vier vazia.
+    private static String mensagemOuPadrao(RuntimeException e, String padrao) {
+        String msg = e.getMessage();
+        return (msg == null || msg.isBlank()) ? padrao : msg;
+    }
+
     @ExceptionHandler (RecursoNaoEncontradoException.class)
     ProblemDetail naoEcontrado(RecursoNaoEncontradoException e){
         return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND,
-            "Recurso não encontrado, digite um valor válido."
+            mensagemOuPadrao(e, "Recurso não encontrado.")
         );
     }
-    
+
 
     @ExceptionHandler(RegraNegocioException.class)
     ProblemDetail regraInvalida(RegraNegocioException e){
         return ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_CONTENT,
-            "Não foi possível realizar a operação, verifique as informações enviadas."
+            mensagemOuPadrao(e, "Não foi possível realizar a operação, verifique as informações enviadas.")
         );
     }
 
+    // 403 = usuário autenticado, mas sem permissão (não é problema de login).
     @ExceptionHandler (AcessoNegadoException.class)
     ProblemDetail acessoNegado(AcessoNegadoException e){
         return ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN,
-            "Acesso negado, tente fazer login novamente."
+            mensagemOuPadrao(e, "Você não tem permissão para realizar esta operação.")
         );
     }
 
     @ExceptionHandler (CredenciaisInvalidasException.class)
     ProblemDetail credenciaisInvalidas(CredenciaisInvalidasException e){
         return ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED,
-            "Credenciais inválidas, verifique seu login e senha."
+            mensagemOuPadrao(e, "Credenciais inválidas, verifique seu login e senha.")
         );
     }
 

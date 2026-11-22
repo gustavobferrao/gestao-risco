@@ -3,6 +3,7 @@ package br.com.gestaorisco.api.dto.response;
 import java.math.BigDecimal;
 
 import br.com.gestaorisco.api.model.Abrigo;
+import br.com.gestaorisco.api.view.AbrigoProximoView;
 
 /** Abrigo com a distância (km) até a coordenada consultada. */
 public record AbrigoProximoResponse(
@@ -31,5 +32,20 @@ public record AbrigoProximoResponse(
                 a.getLatitude(),
                 a.getLongitude(),
                 distanciaKm);
+    }
+
+    public static AbrigoProximoResponse from(AbrigoProximoView v) {
+        return new AbrigoProximoResponse(
+                v.getId(),
+                v.getNome(),
+                v.getTelefone(),
+                v.getLogradouro(),
+                v.getBairro(),
+                v.getCep(),
+                v.getCapacidadeTotal(),
+                v.getVagasDisponiveis(),
+                v.getLatitude(),
+                v.getLongitude(),
+                v.getDistanciaKm());
     }
 }
