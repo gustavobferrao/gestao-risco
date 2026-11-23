@@ -39,6 +39,7 @@ public class PedidoAjudaService {
     private final AreaRiscoRepository areaRiscoRepository;
     private final UsuarioService usuarioService;
 
+    @Transactional
     public PedidoAjudaResponse abrir(PedidoAjudaRequest req, Integer usuarioId){
         Usuario usuario = usuarioService.buscar(usuarioId);
 

@@ -9,6 +9,7 @@ import org.springframework.http.ProblemDetail;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -37,7 +38,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler (RecursoNaoEncontradoException.class)
-    ProblemDetail naoEcontrado(RecursoNaoEncontradoException e){
+    ProblemDetail naoEncontrado(RecursoNaoEncontradoException e){
         return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND,
             mensagemOuPadrao(e, "Recurso não encontrado.")
         );
@@ -90,7 +91,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
-    ProblemDetail tipoIinvalido(MethodArgumentTypeMismatchException e){
+    ProblemDetail tipoInvalido(MethodArgumentTypeMismatchException e){
         return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST,
             "Valor inválido para o parâmetro '%s' : %s".formatted(e.getName(), e.getValue()));
     }
@@ -99,6 +100,14 @@ public class GlobalExceptionHandler {
     ProblemDetail parametroAusente(MissingServletRequestParameterException e){
         return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST,
             "Parâmetro obrigatório ausente: "+e.getParameterName()
+        );
+    }
+
+    // sem isto, a falta do X-Usuario-Id cairia no handler genérico e viraria 500
+    @ExceptionHandler(MissingRequestHeaderException.class)
+    ProblemDetail cabecalhoAusente(MissingRequestHeaderException e){
+        return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST,
+            "Cabeçalho obrigatório ausente: "+e.getHeaderName()
         );
     }
 
