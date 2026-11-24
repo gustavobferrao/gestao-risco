@@ -126,6 +126,47 @@ class PedidoAjudaControllerTest {
             .bodyJson().extractingPath("$").asArray().isEmpty();
     }
 
+    // 6a) usuário inexistente: exceção do service vira 404
+    @Test
+    void meus_usuarioInexistente_retorna404() {
+        when(pedidoAjudaService.meus(99))
+            .thenThrow(new RecursoNaoEncontradoException("Usuário 99 não encontrado."));
+
+        assertThat(mvc.get().uri("/api/pedidos-ajuda/meus")
+                .header("X-Usuario-Id", 99))
+            .hasStatus(HttpStatus.NOT_FOUND);
+    }
+
+    // 6c) rota inexistente: 404 (e não 500 do handler genérico)
+    @Test
+    void rotaInexistente_retorna404() {
+        assertThat(mvc.get().uri("/api/pedidos-ajuda/rota-que-nao-existe/123")
+                .header("X-Usuario-Id", 7))
+            .hasStatus(HttpStatus.NOT_FOUND);
+    }
+
+    // 6d) método não suportado na rota: 405 com cabeçalho Allow
+    @Test
+    void metodoErrado_retorna405() {
+        assertThat(mvc.delete().uri("/api/pedidos-ajuda/meus")
+                .header("X-Usuario-Id", 7))
+            .hasStatus(HttpStatus.METHOD_NOT_ALLOWED)
+            .hasHeader("Allow", "GET")
+            .bodyJson().extractingPath("$.detail").isEqualTo("Método DELETE não suportado para esta rota.");
+    }
+
+    // 6e) Content-Type errado no corpo: 415, service nem é chamado
+    @Test
+    void contentTypeErrado_retorna415() {
+        assertThat(mvc.post().uri("/api/pedidos-ajuda")
+                .header("X-Usuario-Id", 7)
+                .contentType(MediaType.TEXT_PLAIN)
+                .content("Preciso de ajuda"))
+            .hasStatus(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
+            .bodyJson().extractingPath("$.detail").asString().startsWith("Content-Type não suportado: text/plain");
+        verifyNoInteractions(pedidoAjudaService);
+    }
+
     // 6b) sem o header X-Usuario-Id: 400 informando o header, service nem é chamado
     @Test
     void meus_semHeaderUsuario_retorna400() {

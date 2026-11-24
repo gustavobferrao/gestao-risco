@@ -1,0 +1,2340 @@
+{
+  "info": {
+    "_postman_id": "e8233bf9-9b49-465e-8f67-d5434f03a9dd",
+    "name": "Gestão de Risco API - Plano de testes",
+    "description": "Casos do plano de testes. Rodar na ordem das pastas: os ids criados (cidadão, alerta, pedido) são reaproveitados adiante.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "pm.test('tempo < 1000 ms', () => pm.expect(pm.response.responseTime).to.be.below(1000));",
+          "if (pm.response.code >= 400) {",
+          "  pm.test('erro em ProblemDetail', () => {",
+          "    pm.expect(pm.response.headers.get('Content-Type') || '').to.include('application/problem+json');",
+          "    pm.expect(pm.response.json()).to.have.property('detail');",
+          "  });",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "01 Auth",
+      "item": [
+        {
+          "name": "AUTH-01 Cadastro válido",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "function gerarCpf() {",
+                  "  const n = Array.from({length: 9}, () => Math.floor(Math.random() * 10));",
+                  "  if (n.every(d => d === n[0])) n[8] = (n[0] + 1) % 10;",
+                  "  const dv = (arr) => { let s = 0; for (let i = 0; i < arr.length; i++) s += arr[i] * (arr.length + 1 - i); const r = (s * 10) % 11; return r === 10 ? 0 : r; };",
+                  "  n.push(dv(n)); n.push(dv(n));",
+                  "  return n.join('');",
+                  "}",
+                  "const ts = Date.now();",
+                  "pm.environment.set('cidadaoCpf', gerarCpf());",
+                  "pm.environment.set('cidadaoEmail', `cidadao.${ts}@teste.com`);",
+                  "pm.environment.set('cidadaoSenha', 'SenhaForte123');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 201', () => pm.response.to.have.status(201));",
+                  "const b = pm.response.json();",
+                  "pm.test('perfil CIDADAO', () => pm.expect(b.perfil).to.eql('CIDADAO'));",
+                  "pm.test('não expõe senha nem CPF', () => { pm.expect(b).to.not.have.any.keys('senha','senhaHash','cpf'); });",
+                  "pm.test('orgao nulo', () => pm.expect(b.orgaoId).to.be.null);",
+                  "pm.environment.set('cidadaoId', b.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/cadastro",
+            "description": "Esperado: 201; `perfil = CIDADAO`; sem `senha`, `senhaHash`, `cpf`; salva `cidadaoId`",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Cidadã Teste\",\n  \"cpf\": \"{{cidadaoCpf}}\",\n  \"telefone\": \"11987654321\",\n  \"email\": \"{{cidadaoEmail}}\",\n  \"senha\": \"{{cidadaoSenha}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "AUTH-02 Cadastro ignora perfil enviado no corpo",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "function gerarCpf() {",
+                  "  const n = Array.from({length: 9}, () => Math.floor(Math.random() * 10));",
+                  "  if (n.every(d => d === n[0])) n[8] = (n[0] + 1) % 10;",
+                  "  const dv = (arr) => { let s = 0; for (let i = 0; i < arr.length; i++) s += arr[i] * (arr.length + 1 - i); const r = (s * 10) % 11; return r === 10 ? 0 : r; };",
+                  "  n.push(dv(n)); n.push(dv(n));",
+                  "  return n.join('');",
+                  "}",
+                  "pm.environment.set('cpfTmp', gerarCpf());",
+                  "pm.environment.set('emailTmp', `agente.fake.${Date.now()}@teste.com`);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 201', () => pm.response.to.have.status(201));",
+                  "pm.test('perfil continua CIDADAO', () => pm.expect(pm.response.json().perfil).to.eql('CIDADAO'));",
+                  "pm.test('sem órgão', () => pm.expect(pm.response.json().orgaoId).to.be.null);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/cadastro",
+            "description": "Esperado: 201 com `perfil = CIDADAO` e `orgaoId = null`",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Tentativa Agente\",\n  \"cpf\": \"{{cpfTmp}}\",\n  \"telefone\": \"1132654321\",\n  \"email\": \"{{emailTmp}}\",\n  \"senha\": \"SenhaForte123\",\n  \"perfil\": \"AGENTE\",\n  \"orgaoId\": 1\n}"
+            }
+          }
+        },
+        {
+          "name": "AUTH-03 Cadastro com corpo vazio",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "const c = pm.response.json().campos;",
+                  "pm.test('lista os 5 campos', () => pm.expect(c).to.include.all.keys('nome','cpf','telefone','email','senha'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/cadastro",
+            "description": "Esperado: 400; `campos` com nome, cpf, telefone, email, senha",
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          }
+        },
+        {
+          "name": "AUTH-04 Cadastro com CPF inválido",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('erro em cpf', () => pm.expect(pm.response.json().campos).to.have.property('cpf'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/cadastro",
+            "description": "Esperado: 400; `campos.cpf`",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"X\",\n  \"cpf\": \"12345678900\",\n  \"telefone\": \"11987654321\",\n  \"email\": \"cpf.invalido@teste.com\",\n  \"senha\": \"SenhaForte123\"\n}"
+            }
+          }
+        },
+        {
+          "name": "AUTH-05 Cadastro com e-mail duplicado",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "function gerarCpf() {",
+                  "  const n = Array.from({length: 9}, () => Math.floor(Math.random() * 10));",
+                  "  if (n.every(d => d === n[0])) n[8] = (n[0] + 1) % 10;",
+                  "  const dv = (arr) => { let s = 0; for (let i = 0; i < arr.length; i++) s += arr[i] * (arr.length + 1 - i); const r = (s * 10) % 11; return r === 10 ? 0 : r; };",
+                  "  n.push(dv(n)); n.push(dv(n));",
+                  "  return n.join('');",
+                  "}",
+                  "pm.environment.set('cpfTmp', gerarCpf());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 422', () => pm.response.to.have.status(422));",
+                  "pm.test('mensagem', () => pm.expect(pm.response.json().detail).to.eql('E-mail já cadastrado'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/cadastro",
+            "description": "Esperado: 422 \"E-mail já cadastrado\"\n\nObs.: Achado 6: decidir 409 ou 422",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Dup\",\n  \"cpf\": \"{{cpfTmp}}\",\n  \"telefone\": \"11987654321\",\n  \"email\": \"{{cidadaoEmail}}\",\n  \"senha\": \"SenhaForte123\"\n}"
+            }
+          }
+        },
+        {
+          "name": "AUTH-06 Cadastro com CPF duplicado",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.environment.set('emailTmp', `dup.cpf.${Date.now()}@teste.com`);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 422', () => pm.response.to.have.status(422));",
+                  "pm.test('mensagem', () => pm.expect(pm.response.json().detail).to.eql('CPF já cadastrado'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/cadastro",
+            "description": "Esperado: 422 \"CPF já cadastrado\"\n\nObs.: Achado 6",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Dup\",\n  \"cpf\": \"{{cidadaoCpf}}\",\n  \"telefone\": \"11987654321\",\n  \"email\": \"{{emailTmp}}\",\n  \"senha\": \"SenhaForte123\"\n}"
+            }
+          }
+        },
+        {
+          "name": "AUTH-07 Cadastro com senha curta",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('erro em senha', () => pm.expect(pm.response.json().campos).to.have.property('senha'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/cadastro",
+            "description": "Esperado: 400; `campos.senha`",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"X\",\n  \"cpf\": \"52998224725\",\n  \"telefone\": \"11987654321\",\n  \"email\": \"senha.curta@teste.com\",\n  \"senha\": \"1234567\"\n}"
+            }
+          }
+        },
+        {
+          "name": "AUTH-08 Login válido",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('mesmo id do cadastro', () => pm.expect(pm.response.json().id).to.eql(Number(pm.environment.get('cidadaoId'))));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/login",
+            "description": "Esperado: 200; `id` = `cidadaoId`",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{cidadaoEmail}}\",\n  \"senha\": \"{{cidadaoSenha}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "AUTH-09 Login com senha errada",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 401', () => pm.response.to.have.status(401));",
+                  "pm.test('mensagem genérica', () => pm.expect(pm.response.json().detail).to.eql('E-mail ou senha inválidos'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/login",
+            "description": "Esperado: 401 \"E-mail ou senha inválidos\"",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{cidadaoEmail}}\",\n  \"senha\": \"errada123\"\n}"
+            }
+          }
+        },
+        {
+          "name": "AUTH-10 Login com e-mail inexistente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 401', () => pm.response.to.have.status(401));",
+                  "pm.test('mesma mensagem do AUTH-09', () => pm.expect(pm.response.json().detail).to.eql('E-mail ou senha inválidos'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/login",
+            "description": "Esperado: 401 com a mesma mensagem do AUTH-09",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"ninguem@teste.com\",\n  \"senha\": \"qualquer123\"\n}"
+            }
+          }
+        },
+        {
+          "name": "AUTH-11 Login com JSON malformado",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('corpo inválido', () => pm.expect(pm.response.json().detail).to.include('Corpo da requisição inválido'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/login",
+            "description": "Esperado: 400 \"Corpo da requisição inválido…\"",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"a@b.com\", \"senha\": "
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 Catálogos",
+      "item": [
+        {
+          "name": "LOC-01 Listar localidades",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const arr = pm.response.json();",
+                  "pm.test('é lista não vazia', () => { pm.expect(arr).to.be.an('array'); pm.expect(arr.length).to.be.above(0); });",
+                  "pm.test('ordenada por nome', () => { const n = arr.map(x => x.nome); pm.expect(n).to.eql([...n].sort((a,b) => a.localeCompare(b, 'pt-BR'))); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/localidades",
+            "description": "Esperado: 200; lista ordenada por `nome`\n\nObs.: Ordem vem do banco (collation); se divergir em acentos, validar manualmente"
+          }
+        },
+        {
+          "name": "EVT-01 Listar eventos climáticos",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const arr = pm.response.json();",
+                  "pm.test('é lista não vazia', () => { pm.expect(arr).to.be.an('array'); pm.expect(arr.length).to.be.above(0); });",
+                  "pm.test('ordenada por nome', () => { const n = arr.map(x => x.nome); pm.expect(n).to.eql([...n].sort((a,b) => a.localeCompare(b, 'pt-BR'))); });",
+                  "pm.environment.set('eventoId', arr[0].id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/eventos-climaticos",
+            "description": "Esperado: 200; lista ordenada por `nome`; salva `eventoId`"
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 Áreas de risco",
+      "item": [
+        {
+          "name": "AR-01 Listar áreas sem filtro",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const arr = pm.response.json();",
+                  "pm.test('lista não vazia', () => pm.expect(arr.length).to.be.above(0));",
+                  "pm.test('campos do resumo', () => arr.forEach(a => pm.expect(a).to.include.all.keys('id','nome','localidadeId','zona','nivelRisco','alertasAtivos')));",
+                  "pm.test('alertasAtivos é número', () => arr.forEach(a => pm.expect(a.alertasAtivos).to.be.a('number')));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/areas-risco",
+            "description": "Esperado: 200; cada item com `nivelRisco` e `alertasAtivos` numérico"
+          }
+        },
+        {
+          "name": "AR-02 Filtrar por localidade",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('todas da localidade 1', () => pm.response.json().forEach(a => pm.expect(a.localidadeId).to.eql(1)));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/areas-risco?localidadeId=1",
+            "description": "Esperado: 200; todos com `localidadeId = 1`"
+          }
+        },
+        {
+          "name": "AR-03 Filtrar por nível ALTO",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('todas ALTO', () => pm.response.json().forEach(a => pm.expect(a.nivelRisco).to.eql('ALTO')));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/areas-risco?nivel=ALTO",
+            "description": "Esperado: 200; todos `nivelRisco = ALTO`\n\nObs.: Achado 1: provável 500 hoje"
+          }
+        },
+        {
+          "name": "AR-04 Filtrar por zona URBANA",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('todas URBANA', () => pm.response.json().forEach(a => pm.expect(a.zona).to.eql('URBANA')));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/areas-risco?zona=URBANA",
+            "description": "Esperado: 200; todos `zona = URBANA`\n\nObs.: Achado 1"
+          }
+        },
+        {
+          "name": "AR-05 Filtro com nível inválido",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('cita o parâmetro', () => pm.expect(pm.response.json().detail).to.include(\"'nivel'\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/areas-risco?nivel=EXTREMO",
+            "description": "Esperado: 400 \"Valor inválido para o parâmetro 'nivel'\""
+          }
+        },
+        {
+          "name": "AR-06 Detalhar área",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.test('estrutura', () => pm.expect(b).to.include.all.keys('localidade','enderecos','alertasAtivos','historico'));",
+                  "pm.test('só alertas ATIVO', () => b.alertasAtivos.forEach(a => pm.expect(a.status).to.eql('ATIVO')));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/areas-risco/{{areaId}}",
+            "description": "Esperado: 200; `localidade`, `enderecos`, `alertasAtivos` só ATIVO, `historico`"
+          }
+        },
+        {
+          "name": "AR-07 Detalhar área inexistente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/areas-risco/{{idInexistente}}",
+            "description": "Esperado: 404 \"Área de risco 999999 não encontrada\""
+          }
+        },
+        {
+          "name": "AR-08 Histórico da área",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().map(x => x.dataOcorrencia);",
+                  "pm.test('mais recente primeiro', () => pm.expect(d).to.eql([...d].sort().reverse()));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/areas-risco/{{areaId}}/historico",
+            "description": "Esperado: 200; ordenado por `dataOcorrencia` decrescente\n\nObs.: Achados 8 e 9"
+          }
+        },
+        {
+          "name": "AR-09 Histórico de área inexistente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/areas-risco/{{idInexistente}}/historico",
+            "description": "Esperado: 404"
+          }
+        },
+        {
+          "name": "AR-10 Id não numérico",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/areas-risco/abc",
+            "description": "Esperado: 400 \"Valor inválido para o parâmetro 'id'\""
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 Abrigos",
+      "item": [
+        {
+          "name": "ABR-01 Abrigos próximos (padrão)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const arr = pm.response.json();",
+                  "pm.test('ordenado por distância', () => { const d = arr.map(x => x.distanciaKm); pm.expect(d).to.eql([...d].sort((a,b)=>a-b)); });",
+                  "pm.test('só com vaga', () => arr.forEach(a => pm.expect(a.vagasDisponiveis).to.be.above(0)));",
+                  "pm.test('no máximo 5', () => pm.expect(arr.length).to.be.at.most(5));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/abrigos/proximos?lat=-23.55&lng=-46.63",
+            "description": "Esperado: 200; até 5, ordenados por `distanciaKm`, todos com vaga"
+          }
+        },
+        {
+          "name": "ABR-02 Limite 2",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('no máximo 2', () => pm.expect(pm.response.json().length).to.be.at.most(2));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/abrigos/proximos?lat=-23.55&lng=-46.63&limite=2",
+            "description": "Esperado: 200; até 2 itens"
+          }
+        },
+        {
+          "name": "ABR-03 Limite acima do teto",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('teto 20', () => pm.expect(pm.response.json().length).to.be.at.most(20));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/abrigos/proximos?lat=-23.55&lng=-46.63&limite=100",
+            "description": "Esperado: 200; no máximo 20"
+          }
+        },
+        {
+          "name": "ABR-04 Limite zero",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('ajustado para 1', () => pm.expect(pm.response.json().length).to.be.at.most(1));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/abrigos/proximos?lat=-23.55&lng=-46.63&limite=0",
+            "description": "Esperado: 200; ajustado para 1 item"
+          }
+        },
+        {
+          "name": "ABR-05 Sem latitude",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('cita lat', () => pm.expect(pm.response.json().detail).to.include('lat'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/abrigos/proximos?lng=-46.63",
+            "description": "Esperado: 400 \"Parâmetro obrigatório ausente: lat\""
+          }
+        },
+        {
+          "name": "ABR-06 Latitude fora da faixa",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('lista erros', () => pm.expect(pm.response.json().erros).to.be.an('array').that.is.not.empty);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/abrigos/proximos?lat=91&lng=-46.63",
+            "description": "Esperado: 400; `erros` com a faixa da latitude"
+          }
+        },
+        {
+          "name": "ABR-07 Longitude não numérica",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/abrigos/proximos?lat=-23.55&lng=abc",
+            "description": "Esperado: 400 \"Valor inválido para o parâmetro 'lng'\""
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 Alertas",
+      "item": [
+        {
+          "name": "ALE-01 Emitir alerta (agente)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 201', () => pm.response.to.have.status(201));",
+                  "const b = pm.response.json();",
+                  "pm.test('nasce ATIVO', () => pm.expect(b.status).to.eql('ATIVO'));",
+                  "pm.test('órgão do agente', () => pm.expect(b.orgaoId).to.eql(1));",
+                  "pm.test('duas áreas', () => pm.expect(b.areas.map(a => a.id).sort()).to.eql([1,3]));",
+                  "pm.environment.set('alertaId', b.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Usuario-Id",
+                "value": "{{agenteId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/alertas",
+            "description": "Esperado: 201; `ATIVO`, `orgaoId = 1`, áreas 1 e 3; salva `alertaId`",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipo\": \"Risco de deslizamento\",\n  \"nivelSeveridade\": \"CRITICO\",\n  \"areasRiscoIds\": [\n    1,\n    3\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "ALE-02 Listar alertas ativos",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const arr = pm.response.json();",
+                  "pm.test('todos ATIVO', () => arr.forEach(a => pm.expect(a.status).to.eql('ATIVO')));",
+                  "pm.test('contém o emitido', () => pm.expect(arr.map(a => a.id)).to.include(Number(pm.environment.get('alertaId'))));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/alertas?status=ATIVO",
+            "description": "Esperado: 200; só ATIVO; contém `alertaId`"
+          }
+        },
+        {
+          "name": "ALE-03 Filtrar por área mantém lista completa de áreas",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const arr = pm.response.json();",
+                  "pm.test('todos afetam a área 3', () => arr.forEach(a => pm.expect(a.areas.map(x => x.id)).to.include(3)));",
+                  "const meu = arr.find(a => a.id === Number(pm.environment.get('alertaId')));",
+                  "pm.test('alerta emitido ainda lista as 2 áreas', () => pm.expect(meu.areas.length).to.eql(2));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/alertas?areaId=3",
+            "description": "Esperado: 200; todos incluem a área 3; o alerta do ALE-01 continua com 2 áreas"
+          }
+        },
+        {
+          "name": "ALE-04 Status inválido no filtro",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/alertas?status=FOO",
+            "description": "Esperado: 400"
+          }
+        },
+        {
+          "name": "ALE-05 Emitir sem cabeçalho",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('cita o cabeçalho', () => pm.expect(pm.response.json().detail).to.include('X-Usuario-Id'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/alertas",
+            "description": "Esperado: 400 \"Cabeçalho obrigatório ausente: X-Usuario-Id\"",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipo\": \"Teste\",\n  \"nivelSeveridade\": \"BAIXO\",\n  \"areasRiscoIds\": [\n    1\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "ALE-06 Emitir como cidadão",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Usuario-Id",
+                "value": "{{cidadaoId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/alertas",
+            "description": "Esperado: 403 \"Operação permitida apenas para agentes.\"",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipo\": \"Teste\",\n  \"nivelSeveridade\": \"BAIXO\",\n  \"areasRiscoIds\": [\n    1\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "ALE-07 Emitir com usuário inexistente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Usuario-Id",
+                "value": "{{idInexistente}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/alertas",
+            "description": "Esperado: 404",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipo\": \"Teste\",\n  \"nivelSeveridade\": \"BAIXO\",\n  \"areasRiscoIds\": [\n    1\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "ALE-08 Emitir com área inexistente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 422', () => pm.response.to.have.status(422));",
+                  "pm.test('lista a área faltante', () => pm.expect(pm.response.json().detail).to.include('999999'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Usuario-Id",
+                "value": "{{agenteId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/alertas",
+            "description": "Esperado: 422 \"Áreas de risco inexistentes: [999999]\"",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipo\": \"Teste\",\n  \"nivelSeveridade\": \"BAIXO\",\n  \"areasRiscoIds\": [\n    1,\n    999999\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "ALE-09 Emitir sem áreas",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('erro em areasRiscoIds', () => pm.expect(pm.response.json().campos).to.have.property('areasRiscoIds'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Usuario-Id",
+                "value": "{{agenteId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/alertas",
+            "description": "Esperado: 400; `campos.areasRiscoIds`",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipo\": \"Teste\",\n  \"nivelSeveridade\": \"BAIXO\",\n  \"areasRiscoIds\": []\n}"
+            }
+          }
+        },
+        {
+          "name": "ALE-10 Severidade inexistente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Usuario-Id",
+                "value": "{{agenteId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/alertas",
+            "description": "Esperado: 400 corpo inválido",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipo\": \"Teste\",\n  \"nivelSeveridade\": \"EXTREMO\",\n  \"areasRiscoIds\": [\n    1\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "ALE-11 Alterar alerta de outro órgão",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.environment.get('agenteOutroOrgaoId')) { pm.execution.skipRequest(); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "X-Usuario-Id",
+                "value": "{{agenteOutroOrgaoId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/alertas/{{alertaId}}/status",
+            "description": "Esperado: 403 \"Alerta pertence a outro órgão\"\n\nObs.: Pulado se `agenteOutroOrgaoId` estiver vazio",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"ENCERRADO\"\n}"
+            }
+          }
+        },
+        {
+          "name": "ALE-12 Alterar para ATIVO",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 422', () => pm.response.to.have.status(422));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "X-Usuario-Id",
+                "value": "{{agenteId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/alertas/{{alertaId}}/status",
+            "description": "Esperado: 422 \"Novo status deve ser ENCERRADO ou CANCELADO\"",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"ATIVO\"\n}"
+            }
+          }
+        },
+        {
+          "name": "ALE-13 Encerrar alerta",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('ENCERRADO', () => pm.expect(pm.response.json().status).to.eql('ENCERRADO'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "X-Usuario-Id",
+                "value": "{{agenteId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/alertas/{{alertaId}}/status",
+            "description": "Esperado: 200; `status = ENCERRADO`",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"ENCERRADO\"\n}"
+            }
+          }
+        },
+        {
+          "name": "ALE-14 Alterar alerta já encerrado",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 422', () => pm.response.to.have.status(422));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "X-Usuario-Id",
+                "value": "{{agenteId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/alertas/{{alertaId}}/status",
+            "description": "Esperado: 422 \"Só é possível alterar alertas ATIVOS\"",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"CANCELADO\"\n}"
+            }
+          }
+        },
+        {
+          "name": "ALE-15 Alterar alerta inexistente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "X-Usuario-Id",
+                "value": "{{agenteId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/alertas/{{idInexistente}}/status",
+            "description": "Esperado: 404",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"ENCERRADO\"\n}"
+            }
+          }
+        },
+        {
+          "name": "ALE-16 Área deixa de mostrar o alerta encerrado",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('alerta encerrado fora dos ativos', () => pm.expect(pm.response.json().alertasAtivos.map(a => a.id)).to.not.include(Number(pm.environment.get('alertaId'))));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/areas-risco/3",
+            "description": "Esperado: 200; `alertasAtivos` sem o `alertaId`"
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 Ocorrências",
+      "item": [
+        {
+          "name": "ARO-01 Registrar ocorrência",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 201', () => pm.response.to.have.status(201));",
+                  "const b = pm.response.json();",
+                  "pm.test('evento correto', () => pm.expect(b.eventoId).to.eql(Number(pm.environment.get('eventoId'))));",
+                  "pm.environment.set('ocorrenciaId', b.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Usuario-Id",
+                "value": "{{agenteId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/areas-risco/{{areaId}}/ocorrencias",
+            "description": "Esperado: 201; `eventoId` igual ao enviado; salva `ocorrenciaId`",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"eventoId\": {{eventoId}},\n  \"dataOcorrencia\": \"2026-11-20T14:30:00\"\n}"
+            }
+          }
+        },
+        {
+          "name": "ARO-02 Ocorrência aparece no histórico",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('contém a ocorrência', () => pm.expect(pm.response.json().some(h => h.id === Number(pm.environment.get('ocorrenciaId')) && h.eventoId !== null)).to.be.true);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/areas-risco/{{areaId}}/historico",
+            "description": "Esperado: 200; contém a ocorrência do ARO-01"
+          }
+        },
+        {
+          "name": "ARO-03 Registrar como cidadão",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Usuario-Id",
+                "value": "{{cidadaoId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/areas-risco/{{areaId}}/ocorrencias",
+            "description": "Esperado: 403",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"eventoId\": {{eventoId}},\n  \"dataOcorrencia\": \"2026-11-20T14:30:00\"\n}"
+            }
+          }
+        },
+        {
+          "name": "ARO-04 Evento inexistente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Usuario-Id",
+                "value": "{{agenteId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/areas-risco/{{areaId}}/ocorrencias",
+            "description": "Esperado: 404 \"Evento climático 999999 não encontrado\"",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"eventoId\": 999999,\n  \"dataOcorrencia\": \"2026-11-20T14:30:00\"\n}"
+            }
+          }
+        },
+        {
+          "name": "ARO-05 Data no futuro",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('erro em dataOcorrencia', () => pm.expect(pm.response.json().campos).to.have.property('dataOcorrencia'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Usuario-Id",
+                "value": "{{agenteId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/areas-risco/{{areaId}}/ocorrencias",
+            "description": "Esperado: 400; `campos.dataOcorrencia`\n\nObs.: Achado 13",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"eventoId\": {{eventoId}},\n  \"dataOcorrencia\": \"2099-01-01T00:00:00\"\n}"
+            }
+          }
+        },
+        {
+          "name": "ARO-06 Área inexistente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Usuario-Id",
+                "value": "{{agenteId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/areas-risco/{{idInexistente}}/ocorrencias",
+            "description": "Esperado: 404",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"eventoId\": {{eventoId}},\n  \"dataOcorrencia\": \"2026-11-20T14:30:00\"\n}"
+            }
+          }
+        },
+        {
+          "name": "ARO-07 Data em formato brasileiro",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Usuario-Id",
+                "value": "{{agenteId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/areas-risco/{{areaId}}/ocorrencias",
+            "description": "Esperado: 400 corpo inválido",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"eventoId\": {{eventoId}},\n  \"dataOcorrencia\": \"20/11/2026\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "07 Pedidos de ajuda",
+      "item": [
+        {
+          "name": "PED-01 Abrir pedido só com coordenadas",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 201', () => pm.response.to.have.status(201));",
+                  "const b = pm.response.json();",
+                  "pm.test('nasce ABERTO', () => pm.expect(b.status).to.eql('ABERTO'));",
+                  "pm.test('área resolvida pela proximidade', () => pm.expect(b.areaRiscoId).to.eql(7));",
+                  "pm.environment.set('pedidoId', b.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Usuario-Id",
+                "value": "{{cidadaoId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos-ajuda",
+            "description": "Esperado: 201; `ABERTO`; `areaRiscoId = 7` (mais próxima em 5 km); salva `pedidoId`",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"descricao\": \"Água subindo rápido na rua\",\n  \"latitude\": -23.33021,\n  \"longitude\": -46.72778\n}"
+            }
+          }
+        },
+        {
+          "name": "PED-02 Abrir pedido com área informada",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 201', () => pm.response.to.have.status(201));",
+                  "pm.test('área 1', () => pm.expect(pm.response.json().areaRiscoId).to.eql(1));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Usuario-Id",
+                "value": "{{cidadaoId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos-ajuda",
+            "description": "Esperado: 201; `areaRiscoId = 1`",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"descricao\": \"Deslizamento perto de casa\",\n  \"areaRiscoId\": 1\n}"
+            }
+          }
+        },
+        {
+          "name": "PED-03 Abrir pedido longe de qualquer área",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 201', () => pm.response.to.have.status(201));",
+                  "pm.test('sem área', () => pm.expect(pm.response.json().areaRiscoId).to.be.null);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Usuario-Id",
+                "value": "{{cidadaoId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos-ajuda",
+            "description": "Esperado: 201; `areaRiscoId = null`",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"descricao\": \"Preciso de ajuda\",\n  \"latitude\": 0,\n  \"longitude\": 0\n}"
+            }
+          }
+        },
+        {
+          "name": "PED-04 Só latitude",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('regra de par', () => pm.expect(pm.response.json().campos).to.have.property('coordenadasConsistentes'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Usuario-Id",
+                "value": "{{cidadaoId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos-ajuda",
+            "description": "Esperado: 400; `campos.coordenadasConsistentes`",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"descricao\": \"Teste\",\n  \"latitude\": -23.5\n}"
+            }
+          }
+        },
+        {
+          "name": "PED-05 Descrição vazia",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Usuario-Id",
+                "value": "{{cidadaoId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos-ajuda",
+            "description": "Esperado: 400; `campos.descricao`",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"descricao\": \"  \"\n}"
+            }
+          }
+        },
+        {
+          "name": "PED-06 Latitude com 7 casas",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Usuario-Id",
+                "value": "{{cidadaoId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos-ajuda",
+            "description": "Esperado: 400; `campos.latitude`",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"descricao\": \"Teste\",\n  \"latitude\": -23.1234567,\n  \"longitude\": -46.123456\n}"
+            }
+          }
+        },
+        {
+          "name": "PED-07 Área inexistente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Usuario-Id",
+                "value": "{{cidadaoId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos-ajuda",
+            "description": "Esperado: 404",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"descricao\": \"Teste\",\n  \"areaRiscoId\": 999999\n}"
+            }
+          }
+        },
+        {
+          "name": "PED-08 Meus pedidos",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const arr = pm.response.json();",
+                  "const uid = Number(pm.environment.get('cidadaoId'));",
+                  "pm.test('só do usuário', () => arr.forEach(p => pm.expect(p.usuarioId).to.eql(uid)));",
+                  "pm.test('contém o PED-01', () => pm.expect(arr.map(p => p.id)).to.include(Number(pm.environment.get('pedidoId'))));",
+                  "const d = arr.map(p => p.dataHoraSolicitacao);",
+                  "pm.test('mais recente primeiro', () => pm.expect(d).to.eql([...d].sort().reverse()));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Usuario-Id",
+                "value": "{{cidadaoId}}"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos-ajuda/meus",
+            "description": "Esperado: 200; só do cidadão, mais recente primeiro, contém `pedidoId`"
+          }
+        },
+        {
+          "name": "PED-09 Meus pedidos com usuário inexistente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Usuario-Id",
+                "value": "{{idInexistente}}"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos-ajuda/meus",
+            "description": "Esperado: 404\n\nObs.: Achado 7: hoje devolve 200 `[]`"
+          }
+        },
+        {
+          "name": "PED-10 Fila do agente (padrão ABERTO)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const arr = pm.response.json();",
+                  "pm.test('todos ABERTO', () => arr.forEach(p => pm.expect(p.status).to.eql('ABERTO')));",
+                  "const d = arr.map(p => p.dataHoraSolicitacao);",
+                  "pm.test('mais antigo primeiro', () => pm.expect(d).to.eql([...d].sort()));",
+                  "pm.test('contém o PED-01', () => pm.expect(arr.map(p => p.id)).to.include(Number(pm.environment.get('pedidoId'))));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Usuario-Id",
+                "value": "{{agenteId}}"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos-ajuda",
+            "description": "Esperado: 200; só ABERTO, mais antigo primeiro"
+          }
+        },
+        {
+          "name": "PED-11 Fila como cidadão",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Usuario-Id",
+                "value": "{{cidadaoId}}"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos-ajuda",
+            "description": "Esperado: 403"
+          }
+        },
+        {
+          "name": "PED-12 Transição ABERTO → CONCLUIDO",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 422', () => pm.response.to.have.status(422));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "X-Usuario-Id",
+                "value": "{{agenteId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos-ajuda/{{pedidoId}}/status",
+            "description": "Esperado: 422 \"Transição inválida: ABERTO -> CONCLUIDO\"",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"CONCLUIDO\"\n}"
+            }
+          }
+        },
+        {
+          "name": "PED-13 Alterar status como cidadão",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "X-Usuario-Id",
+                "value": "{{cidadaoId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos-ajuda/{{pedidoId}}/status",
+            "description": "Esperado: 403",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"EM_ATENDIMENTO\"\n}"
+            }
+          }
+        },
+        {
+          "name": "PED-14 ABERTO → EM_ATENDIMENTO",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('EM_ATENDIMENTO', () => pm.expect(pm.response.json().status).to.eql('EM_ATENDIMENTO'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "X-Usuario-Id",
+                "value": "{{agenteId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos-ajuda/{{pedidoId}}/status",
+            "description": "Esperado: 200; `EM_ATENDIMENTO`\n\nObs.: Achado 10: qualquer agente consegue",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"EM_ATENDIMENTO\"\n}"
+            }
+          }
+        },
+        {
+          "name": "PED-15 Fila filtrada por EM_ATENDIMENTO",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('contém o pedido', () => pm.expect(pm.response.json().map(p => p.id)).to.include(Number(pm.environment.get('pedidoId'))));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Usuario-Id",
+                "value": "{{agenteId}}"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos-ajuda?status=EM_ATENDIMENTO",
+            "description": "Esperado: 200; contém `pedidoId`"
+          }
+        },
+        {
+          "name": "PED-16 EM_ATENDIMENTO → CONCLUIDO",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "X-Usuario-Id",
+                "value": "{{agenteId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos-ajuda/{{pedidoId}}/status",
+            "description": "Esperado: 200; `CONCLUIDO`",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"CONCLUIDO\"\n}"
+            }
+          }
+        },
+        {
+          "name": "PED-17 Alterar pedido concluído",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 422', () => pm.response.to.have.status(422));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "X-Usuario-Id",
+                "value": "{{agenteId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos-ajuda/{{pedidoId}}/status",
+            "description": "Esperado: 422 transição inválida",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"CANCELADO\"\n}"
+            }
+          }
+        },
+        {
+          "name": "PED-18 Pedido inexistente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "X-Usuario-Id",
+                "value": "{{agenteId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos-ajuda/{{idInexistente}}/status",
+            "description": "Esperado: 404",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"EM_ATENDIMENTO\"\n}"
+            }
+          }
+        },
+        {
+          "name": "PED-19 Abrir pedido com usuário inexistente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Usuario-Id",
+                "value": "{{idInexistente}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos-ajuda",
+            "description": "Esperado: 404",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"descricao\": \"Teste\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "08 Genéricos e segurança",
+      "item": [
+        {
+          "name": "GEN-01 Rota inexistente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/rota-que-nao-existe",
+            "description": "Esperado: 404\n\nObs.: Achado 2: hoje provável 500"
+          }
+        },
+        {
+          "name": "GEN-02 Método não suportado",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 405', () => pm.response.to.have.status(405));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/alertas",
+            "description": "Esperado: 405\n\nObs.: Achado 2: hoje provável 500"
+          }
+        },
+        {
+          "name": "GEN-03 Content-Type errado",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 415', () => pm.response.to.have.status(415));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/plain"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/login",
+            "description": "Esperado: 415\n\nObs.: Achado 2: hoje provável 500",
+            "body": {
+              "mode": "raw",
+              "raw": "email=a@b.com"
+            }
+          }
+        },
+        {
+          "name": "GEN-04 Documentação OpenAPI",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{host}}/v3/api-docs",
+            "description": "Esperado: 200 com o JSON da especificação\n\nObs.: Achado 4"
+          }
+        },
+        {
+          "name": "SEC-01 Cabeçalho forjado acessa a fila",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Usuario-Id",
+                "value": "{{agenteId}}"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos-ajuda",
+            "description": "Esperado: Hoje 200 sem login (comprova o achado 3). Depois do JWT: 401\n\nObs.: Achado 3"
+          }
+        },
+        {
+          "name": "SEC-02 X-Usuario-Id não numérico",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Usuario-Id",
+                "value": "abc"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos-ajuda/meus",
+            "description": "Esperado: 400"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -35,9 +35,7 @@ public class AreaRiscoController {
     public List<AreaRiscoResumoResponse> listar(@RequestParam(required = false) Integer localidadeId,
                                                 @RequestParam(required = false) NivelRisco nivel,
                                                 @RequestParam(required = false) Zona zona) {
-        return areaRiscoService.listar(localidadeId,
-                nivel == null ? null : nivel.name(),
-                zona == null ? null : zona.name());
+        return areaRiscoService.listar(localidadeId, nivel, zona);
     }
 
     @GetMapping("/{id}")

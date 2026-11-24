@@ -8,6 +8,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
 import br.com.gestaorisco.api.model.AreaRisco;
+import br.com.gestaorisco.api.model.enums.NivelRisco;
+import br.com.gestaorisco.api.model.enums.Zona;
 
 public interface AreaRiscoRepository extends JpaRepository<AreaRisco, Integer> {
 
@@ -18,7 +20,7 @@ public interface AreaRiscoRepository extends JpaRepository<AreaRisco, Integer> {
     and (:nivelRisco is null or a.nivelRisco = :nivelRisco)
     and (:zona is null or a.zona = :zona)
 order by a.nome""")
-    List<AreaRisco> filtrar(Integer localidadeId,String nivelRisco,String zona);
+    List<AreaRisco> filtrar(Integer localidadeId, NivelRisco nivelRisco, Zona zona);
 
     // Busca uma área pelo id já carregando localidade e endereços.
     @EntityGraph (attributePaths={"localidade", "enderecos"})

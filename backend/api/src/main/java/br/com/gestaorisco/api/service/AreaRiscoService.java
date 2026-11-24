@@ -40,7 +40,7 @@ public class AreaRiscoService {
     private final EventoClimaticoRepository eventoClimaticoRepository;
     private final UsuarioService usuarioService;
 
-    public List<AreaRiscoResumoResponse> listar(Integer localidadeId, String nivel, String zona){
+    public List<AreaRiscoResumoResponse> listar(Integer localidadeId, NivelRisco nivel, Zona zona){
         Map<Integer, Long> ativosPorArea = alertaRepository.contarAtivosPorArea().stream()
             .collect(Collectors.toMap(ContagemAlertasView::getAreaId, ContagemAlertasView::getTotal));
         

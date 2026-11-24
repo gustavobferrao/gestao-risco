@@ -15,10 +15,14 @@ import org.springframework.context.MessageSourceResolvable;
 import org.springframework.context.support.DefaultMessageSourceResolvable;
 import org.springframework.core.MethodParameter;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.mock.http.MockHttpInputMessage;
+import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -55,6 +59,27 @@ class GlobalExceptionHandlerTest {
         assertThat(pd.getStatus()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR.value());
         assertThat(pd.getDetail()).isEqualTo("Erro inesperado no servidor. Tente novamente.")
             .doesNotContain("XPTO");
+    }
+
+    // exceção web do Spring que já carrega status (ex.: 405) mantém o status em vez de virar 500
+    @Test
+    void erroInesperado_errorResponseDoSpring_mantemStatus(){
+        ProblemDetail pd = handler.erroInesperado(new HttpRequestMethodNotSupportedException("DELETE"));
+
+        assertThat(pd.getStatus()).isEqualTo(HttpStatus.METHOD_NOT_ALLOWED.value());
+    }
+
+    // ===================== rota inexistente =====================
+
+    // rota inexistente vira 404 informando método e caminho
+    @Test
+    void rotaInexistente_retorna404(){
+        var req = new MockHttpServletRequest("GET", "/api/nao-existe");
+        ProblemDetail pd = handler.rotaInexistente(
+            new NoResourceFoundException(HttpMethod.GET, "/api/nao-existe", "api/nao-existe"), req);
+
+        assertThat(pd.getStatus()).isEqualTo(404);
+        assertThat(pd.getDetail()).isEqualTo("Rota não encontrada: GET /api/nao-existe");
     }
 
     // ===================== exceções de domínio =====================

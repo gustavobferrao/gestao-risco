@@ -56,6 +56,7 @@ public class PedidoAjudaService {
     }
 
     public List<PedidoAjudaResponse> meus(Integer usuarioId){
+        usuarioService.buscar(usuarioId);
         return pedidoAjudaRepository.findByUsuarioIdOrderByDataHoraSolicitacaoDesc(usuarioId).stream()
             .map(PedidoAjudaResponse::from)
             .toList();

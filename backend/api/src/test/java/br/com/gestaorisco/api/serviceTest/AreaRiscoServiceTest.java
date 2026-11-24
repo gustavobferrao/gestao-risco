@@ -119,9 +119,9 @@ class AreaRiscoServiceTest {
     @Test
     void listar_juntaContagemDeAlertasAtivos(){
         when(alertaRepository.contarAtivosPorArea()).thenReturn(List.of(contagem(5, 3L)));
-        when(areaRiscoRepository.filtrar(1, "ALTO", "URBANA")).thenReturn(List.of(area(5)));
+        when(areaRiscoRepository.filtrar(1, NivelRisco.ALTO, Zona.URBANA)).thenReturn(List.of(area(5)));
 
-        List<AreaRiscoResumoResponse> resp = service.listar(1, "ALTO", "URBANA");
+        List<AreaRiscoResumoResponse> resp = service.listar(1, NivelRisco.ALTO, Zona.URBANA);
 
         assertThat(resp).hasSize(1);
         assertThat(resp.get(0).id()).isEqualTo(5);

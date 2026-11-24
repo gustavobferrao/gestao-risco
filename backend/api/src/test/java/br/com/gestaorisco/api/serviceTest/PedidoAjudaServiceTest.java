@@ -268,4 +268,14 @@ class PedidoAjudaServiceTest {
 
         assertThat(service.meus(1)).isEmpty();
     }
+
+    // usuário inexistente lança 404 em vez de devolver lista vazia
+    @Test
+    void meus_usuarioInexistente_lancaNaoEncontrado(){
+        when(usuarioService.buscar(99)).thenThrow(new RecursoNaoEncontradoException("Usuário 99 não encontrado."));
+
+        assertThatThrownBy(() -> service.meus(99))
+            .isInstanceOf(RecursoNaoEncontradoException.class);
+        verifyNoInteractions(pedidoAjudaRepository);
+    }
 }

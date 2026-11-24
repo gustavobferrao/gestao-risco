@@ -49,12 +49,12 @@ class AreaRiscoControllerTest {
     // 2) filtros chegam como enum e são repassados ao service como String
     @Test
     void listar_comFiltros_repassaParaService() {
-        when(areaRiscoService.listar(1, "ALTO", "URBANA")).thenReturn(List.of(RESUMO));
+        when(areaRiscoService.listar(1, NivelRisco.ALTO, Zona.URBANA)).thenReturn(List.of(RESUMO));
 
         assertThat(mvc.get().uri("/api/areas-risco?localidadeId=1&nivel=ALTO&zona=URBANA"))
             .hasStatus(HttpStatus.OK);
 
-        verify(areaRiscoService).listar(1, "ALTO", "URBANA");
+        verify(areaRiscoService).listar(1, NivelRisco.ALTO, Zona.URBANA);
     }
 
     // 3) enum inexistente: 400 e o service nem é chamado

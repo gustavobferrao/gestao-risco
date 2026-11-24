@@ -3,7 +3,12 @@ spring:
     name: api
 
   config:
-    import: optional:file:.env[.properties]
+    # O caminho do .env é relativo ao diretório de execução:
+    # - rodando de backend/api (mvnw spring-boot:run) -> .env
+    # - rodando pelo IntelliJ com o projeto aberto na raiz do repo -> backend/api/.env
+    import:
+      - optional:file:.env[.properties]
+      - optional:file:backend/api/.env[.properties]
 
   datasource:
     url: ${DB_URL}

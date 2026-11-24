@@ -2,6 +2,8 @@ package br.com.gestaorisco.api.handler;
 
 import java.util.stream.Collectors;
 
+import jakarta.servlet.http.HttpServletRequest;
+
 import org.springframework.context.MessageSourceResolvable;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -15,6 +17,11 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.ErrorResponse;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import br.com.gestaorisco.api.exception.AcessoNegadoException;
 import br.com.gestaorisco.api.exception.CredenciaisInvalidasException;
@@ -26,8 +33,37 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     ProblemDetail erroInesperado(Exception e){
+        // Exceções web do Spring (405 método não suportado, 415 content-type, etc.) já trazem o
+        // status correto; sem isto o handler genérico transformaria todas em 500.
+        if (e instanceof ErrorResponse er) {
+            return er.getBody();
+        }
         return ProblemDetail.forStatusAndDetail(HttpStatus.INTERNAL_SERVER_ERROR,
             "Erro inesperado no servidor. Tente novamente.");
+    }
+
+    // 405: rota existe, mas não aceita o método usado; o cabeçalho Allow informa os métodos aceitos
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    ResponseEntity<ProblemDetail> metodoNaoSuportado(HttpRequestMethodNotSupportedException e){
+        var pd = ProblemDetail.forStatusAndDetail(HttpStatus.METHOD_NOT_ALLOWED,
+            "Método " + e.getMethod() + " não suportado para esta rota.");
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).headers(e.getHeaders()).body(pd);
+    }
+
+    // 415: Content-Type do corpo não aceito; o cabeçalho Accept informa os tipos aceitos
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    ResponseEntity<ProblemDetail> tipoConteudoNaoSuportado(HttpMediaTypeNotSupportedException e){
+        String recebido = e.getContentType() == null ? "ausente" : e.getContentType().toString();
+        var pd = ProblemDetail.forStatusAndDetail(HttpStatus.UNSUPPORTED_MEDIA_TYPE,
+            "Content-Type não suportado: " + recebido + ". Use application/json.");
+        return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE).headers(e.getHeaders()).body(pd);
+    }
+
+    // rota inexistente: o Spring lança NoResourceFoundException, que deve virar 404 (e não 500)
+    @ExceptionHandler(NoResourceFoundException.class)
+    ProblemDetail rotaInexistente(NoResourceFoundException e, HttpServletRequest req){
+        return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND,
+            "Rota não encontrada: " + req.getMethod() + " " + req.getRequestURI());
     }
 
     // Exceções de domínio carregam mensagens escritas para o usuário final: repassa a mensagem
