@@ -1,0 +1,14 @@
+{
+  "name": "SafeZone — Defesa & Emergência",
+  "short_name": "SafeZone",
+  "description": "Alertas de enchentes e deslizamentos, mapa de áreas de risco, abrigos próximos e pedidos de socorro.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0B3D3C",
+  "theme_color": "#0B3D3C",
+  "lang": "pt-BR",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/safezone-logo.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
