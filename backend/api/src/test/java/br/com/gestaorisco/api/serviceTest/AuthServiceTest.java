@@ -18,6 +18,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import br.com.gestaorisco.api.dto.request.CadastroRequest;
 import br.com.gestaorisco.api.dto.request.LoginRequest;
 import br.com.gestaorisco.api.dto.response.UsuarioResponse;
+import br.com.gestaorisco.api.exception.AcessoNegadoException;
 import br.com.gestaorisco.api.exception.CredenciaisInvalidasException;
 import br.com.gestaorisco.api.exception.RegraNegocioException;
 import br.com.gestaorisco.api.model.OrgaoResponsavel;
@@ -25,12 +26,14 @@ import br.com.gestaorisco.api.model.Usuario;
 import br.com.gestaorisco.api.model.enums.Perfil;
 import br.com.gestaorisco.api.repository.UsuarioRepository;
 import br.com.gestaorisco.api.service.AuthService;
+import br.com.gestaorisco.api.service.UsuarioService;
 
 @ExtendWith(MockitoExtension.class)
 class AuthServiceTest {
 
     @Mock UsuarioRepository usuarioRepository;
     @Mock PasswordEncoder passwordEncoder;
+    @Mock UsuarioService usuarioService;
 
     @InjectMocks AuthService service;
 
@@ -179,5 +182,52 @@ class AuthServiceTest {
         assertThat(emailErrado).isInstanceOf(CredenciaisInvalidasException.class);
         assertThat(senhaErrada).isInstanceOf(CredenciaisInvalidasException.class)
             .hasMessage(emailErrado.getMessage());
+    }
+
+    // ===================== cadastrarAgente =====================
+
+    // agente cadastra agente: perfil AGENTE e o órgão de quem cadastrou (nunca do corpo)
+    @Test
+    void cadastrarAgente_porAgente_salvaAgenteNoOrgaoDoCriador(){
+        OrgaoResponsavel orgao = new OrgaoResponsavel();
+        orgao.setId(3);
+        orgao.setNome("Defesa Civil");
+        Usuario criador = usuarioSalvo(Perfil.AGENTE, orgao);
+        when(usuarioService.exigirAgente(10)).thenReturn(criador);
+        when(usuarioRepository.existsByEmail("maria@email.com")).thenReturn(false);
+        when(usuarioRepository.existsByCpf("52998224725")).thenReturn(false);
+        when(passwordEncoder.encode("senhaForte123")).thenReturn("HASH");
+        when(usuarioRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        UsuarioResponse resp = service.cadastrarAgente(cadastro(), 10);
+
+        verify(usuarioRepository).save(captor.capture());
+        assertThat(captor.getValue().getPerfil()).isEqualTo(Perfil.AGENTE);
+        assertThat(captor.getValue().getOrgao()).isSameAs(orgao);
+        assertThat(captor.getValue().getSenhaHash()).isEqualTo("HASH");
+        assertThat(resp.orgaoId()).isEqualTo(3);
+    }
+
+    // quem não é agente é barrado antes de qualquer gravação
+    @Test
+    void cadastrarAgente_porCidadao_lancaAcessoNegadoENaoSalva(){
+        when(usuarioService.exigirAgente(2))
+            .thenThrow(new AcessoNegadoException("Operação permitida apenas para agentes."));
+
+        assertThatThrownBy(() -> service.cadastrarAgente(cadastro(), 2))
+            .isInstanceOf(AcessoNegadoException.class);
+        verify(usuarioRepository, never()).save(any());
+    }
+
+    // mesmas regras de duplicidade do cadastro público
+    @Test
+    void cadastrarAgente_emailDuplicado_lancaRegraNegocio(){
+        when(usuarioService.exigirAgente(10)).thenReturn(usuarioSalvo(Perfil.AGENTE, new OrgaoResponsavel()));
+        when(usuarioRepository.existsByEmail("maria@email.com")).thenReturn(true);
+
+        assertThatThrownBy(() -> service.cadastrarAgente(cadastro(), 10))
+            .isInstanceOf(RegraNegocioException.class)
+            .hasMessage("E-mail já cadastrado");
+        verify(usuarioRepository, never()).save(any());
     }
 }

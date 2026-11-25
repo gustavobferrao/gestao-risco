@@ -22,4 +22,5 @@ spring:
   
 app:
   cors:
-    allowed-origins: http://localhost:5173
+    # origem do front Next.js (pnpm dev). Para mais de uma, separe por vírgula.
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
