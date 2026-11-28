@@ -5,6 +5,7 @@ import { usePrefs } from '@/lib/prefs-context'
 import { categoriasRisco } from '@/lib/mock-data'
 import { formatarDistancia } from '@/lib/format'
 import { idiomas } from '@/lib/i18n'
+import { MeuEndereco } from '@/components/endereco/meu-endereco'
 
 function Secao({ id, titulo, children }) {
   return (
@@ -17,7 +18,7 @@ function Secao({ id, titulo, children }) {
   )
 }
 
-export function PreferencesPage() {
+export function PreferencesPage({ enderecoReq }) {
   const { prefs, atualizar, alternarTipo, t } = usePrefs()
 
   return (
@@ -26,6 +27,12 @@ export function PreferencesPage() {
         <h1 className="text-3xl font-extrabold">{t('prefs.title')}</h1>
         <p className="text-base text-ink2">{t('prefs.subtitle')}</p>
       </div>
+
+      {enderecoReq && (
+        <Secao id="pref-endereco-titulo" titulo="Meu endereço">
+          <MeuEndereco enderecoReq={enderecoReq} />
+        </Secao>
+      )}
 
       <Secao id="pref-tipos" titulo={t('prefs.types')}>
         <p className="-mt-3 text-base text-ink2">{t('prefs.typesHint')}</p>

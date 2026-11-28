@@ -7,7 +7,7 @@ import 'leaflet/dist/leaflet.css'
 import { useEffect, useState } from 'react'
 import { CircleMarker, MapContainer, Popup, TileLayer, Tooltip, useMap } from 'react-leaflet'
 import { googleMapsRotaUrl } from '@/lib/maps'
-import { LOCALIZACAO_PADRAO } from '@/lib/use-localizacao'
+import { CENTRO_INICIAL_MAPA } from '@/lib/use-localizacao'
 
 const TILES_URL = process.env.NEXT_PUBLIC_MAP_TILES_URL ?? 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
 const ATRIBUICAO = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
@@ -84,7 +84,7 @@ function Enquadrar({ posicao, pontos }) {
  */
 export default function RiskMapLeaflet({ zonas, abrigos, posicao, pontosEnquadramento, onVerArea }) {
   const cores = useCoresTema()
-  const centroInicial = posicao ?? LOCALIZACAO_PADRAO
+  const centroInicial = posicao ?? CENTRO_INICIAL_MAPA
 
   return (
     <MapContainer

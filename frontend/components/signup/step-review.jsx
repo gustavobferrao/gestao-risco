@@ -1,4 +1,5 @@
 import { CircleAlert, Pencil } from 'lucide-react'
+import { resumoEndereco } from '@/components/endereco/campos-endereco'
 import { cn } from '@/lib/utils'
 
 function Bloco({ titulo, passo, onEditar, linhas }) {
@@ -48,6 +49,15 @@ export function StepReview({ form, onEditar }) {
           ['Telefone', d.telefone],
           ['E-mail', d.email],
           ['Senha', '••••••••'],
+        ]}
+      />
+      <Bloco
+        titulo="Endereço"
+        passo={2}
+        onEditar={onEditar}
+        linhas={[
+          ['Onde você mora', resumoEndereco(d.endereco) ?? 'Vai informar depois'],
+          ...(d.endereco.gps ? [['Localização do aparelho', 'Registrada']] : []),
         ]}
       />
       <div>

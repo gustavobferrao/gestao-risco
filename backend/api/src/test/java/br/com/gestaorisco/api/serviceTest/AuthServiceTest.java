@@ -26,6 +26,8 @@ import br.com.gestaorisco.api.model.Usuario;
 import br.com.gestaorisco.api.model.enums.Perfil;
 import br.com.gestaorisco.api.repository.UsuarioRepository;
 import br.com.gestaorisco.api.service.AuthService;
+import br.com.gestaorisco.api.service.EnderecoUsuarioService;
+import br.com.gestaorisco.api.dto.request.EnderecoRequest;
 import br.com.gestaorisco.api.service.UsuarioService;
 
 @ExtendWith(MockitoExtension.class)
@@ -34,6 +36,7 @@ class AuthServiceTest {
     @Mock UsuarioRepository usuarioRepository;
     @Mock PasswordEncoder passwordEncoder;
     @Mock UsuarioService usuarioService;
+    @Mock EnderecoUsuarioService enderecoUsuarioService;
 
     @InjectMocks AuthService service;
 
@@ -86,6 +89,36 @@ class AuthServiceTest {
         assertThat(resp.id()).isEqualTo(1);
         assertThat(resp.perfil()).isEqualTo(Perfil.CIDADAO);
         assertThat(resp.orgaoId()).isNull();
+    }
+
+    // sem endereço: o serviço de endereço nem é chamado
+    @Test
+    void cadastrar_semEndereco_naoSalvaEndereco(){
+        when(usuarioRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(passwordEncoder.encode(any())).thenReturn("HASH");
+
+        service.cadastrar(cadastro());
+
+        verifyNoInteractions(enderecoUsuarioService);
+    }
+
+    // com endereço: salva o endereço para o usuário recém-criado
+    @Test
+    void cadastrar_comEndereco_salvaEnderecoDoUsuarioCriado(){
+        when(passwordEncoder.encode(any())).thenReturn("HASH");
+        when(usuarioRepository.save(any())).thenAnswer(inv -> {
+            Usuario u = inv.getArgument(0);
+            u.setId(7);
+            return u;
+        });
+        EnderecoRequest endereco = new EnderecoRequest("25620003", "Rua do Imperador", "100", null, "Centro",
+            null, null, null, true);
+        CadastroRequest req = new CadastroRequest("Maria", "52998224725", "11987654321",
+            "maria@email.com", "senhaForte123", endereco);
+
+        service.cadastrar(req);
+
+        verify(enderecoUsuarioService).salvar(argThat((Usuario u) -> u.getId() == 7), eq(endereco));
     }
 
     // e-mail já cadastrado lança regra de negócio, não checa CPF e nada é salvo

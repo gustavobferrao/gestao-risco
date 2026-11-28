@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Clock, Footprints, Users } from 'lucide-react'
 import { Carregando, ErroApi } from '@/components/api-state'
 import { MapsRedirectButton } from '@/components/maps-redirect-button'
+import { LocalizacaoAviso } from '@/components/localizacao-aviso'
 import { RiskMap } from '@/components/risk-map'
 import { PetFilter, PetVagas, ShelterPetBadge } from '@/components/shelter-pet-badge'
 
@@ -88,11 +89,7 @@ export function MapPage({ abrigos, abrigosReq, localizacao, onVerArea }) {
             <h2 id="titulo-abrigos" className="text-2xl font-extrabold">
               Abrigos próximos
             </h2>
-            {localizacao.origem === 'padrao' && (
-              <p className="text-sm text-ink2">
-                Não conseguimos sua localização; distâncias calculadas a partir do centro de São Paulo.
-              </p>
-            )}
+            <LocalizacaoAviso localizacao={localizacao} className="mt-1" />
           </div>
           {temDadosPets && <PetFilter id="morador-filtro-pets" checked={soPets} onChange={setSoPets} />}
         </div>

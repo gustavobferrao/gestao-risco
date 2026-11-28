@@ -24,6 +24,7 @@ public class AuthService {
     private final UsuarioRepository usuarioRepository;
     private final UsuarioService usuarioService;
     private final PasswordEncoder passwordEncoder;
+    private final EnderecoUsuarioService enderecoUsuarioService;
 
     // cadastro público: perfil é sempre CIDADAO, nunca vem do request
     @Transactional
@@ -57,7 +58,13 @@ public class AuthService {
         usuario.setPerfil(perfil);
         usuario.setOrgao(orgao);
 
-        return usuarioRepository.save(usuario);
+        Usuario salvo = usuarioRepository.save(usuario);
+
+        // endereço é opcional; se vier inválido, a transação desfaz o usuário também
+        if (req.endereco() != null)
+            enderecoUsuarioService.salvar(salvo, req.endereco());
+
+        return salvo;
     }
 
     public UsuarioResponse login(LoginRequest req) {

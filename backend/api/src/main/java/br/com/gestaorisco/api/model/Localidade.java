@@ -36,4 +36,22 @@ public class Localidade {
     /** Área territorial em km². */
     @Column(name = "area", nullable = false, precision = 12, scale = 2)
     private BigDecimal area;
+
+    /** Código IBGE do município (7 dígitos): chave para cruzar com INMET, Cemaden, Atlas e ViaCEP. */
+    @Column(name = "codigo_ibge", unique = true, columnDefinition = "CHAR(7)")
+    private String codigoIbge;
+
+    @Column(name = "uf", columnDefinition = "CHAR(2)")
+    private String uf;
+
+    /** Sede do município (WGS84): usada quando o usuário só informou a cidade. */
+    @Column(name = "latitude", precision = 9, scale = 6)
+    private BigDecimal latitude;
+
+    @Column(name = "longitude", precision = 9, scale = 6)
+    private BigDecimal longitude;
+
+    /** Cidade coberta pelo SafeZone no MVP. */
+    @Column(name = "atendida", nullable = false, columnDefinition = "BOOLEAN")
+    private boolean atendida;
 }

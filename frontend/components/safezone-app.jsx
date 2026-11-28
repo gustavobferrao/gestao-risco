@@ -13,7 +13,7 @@ import { PreferencesPage } from '@/components/preferences-page'
 import { SOSButton } from '@/components/sos-button'
 import { SignupFlow } from '@/components/signup/signup-flow'
 import { resumoPets } from '@/components/pet-toggle-fields'
-import { abrigosService, alertasService } from '@/lib/api/services'
+import { abrigosService, alertasService, enderecoService } from '@/lib/api/services'
 import { useApi } from '@/lib/api/use-api'
 import { useAuth } from '@/lib/auth-context'
 import { useDetalheArea } from '@/lib/use-detalhe-area'
@@ -37,14 +37,24 @@ function Dashboard({ onLogout }) {
   const { usuario } = useAuth()
   const { foiDispensado, dispensar } = useAlertasDispensados(usuario?.id)
 
-  const localizacao = useLocalizacao()
+  // endereço do cadastro: base da posição quando o GPS não está disponível.
+  // undefined enquanto carrega; null se o usuário não informou (ou se a busca falhou).
+  const enderecoReq = useApi((signal) => enderecoService.buscar({ signal }), [])
+  const endereco = enderecoReq.carregando && enderecoReq.dados === null ? undefined : (enderecoReq.dados ?? null)
+
+  const localizacao = useLocalizacao({ endereco })
   const { lat, lng } = localizacao.coords ?? {}
+  const semLocal = localizacao.origem === 'sem-local'
 
   const alertasReq = useApi((signal) => alertasService.listar({}, { signal }), [])
   const abrigosReq = useApi(
     // enquanto a posição não resolve, a busca fica pendente (carregando)
-    (signal) => (lat === undefined ? AGUARDANDO : abrigosService.proximos({ lat, lng, limite: 6 }, { signal })),
-    [lat, lng],
+    // sem posição nenhuma não há "próximo": lista vazia e a tela pede a cidade
+    (signal) => {
+      if (lat !== undefined) return abrigosService.proximos({ lat, lng, limite: 6 }, { signal })
+      return semLocal ? Promise.resolve([]) : AGUARDANDO
+    },
+    [lat, lng, semLocal],
   )
 
   // alertas são críticos: atualiza periodicamente sem recarregar a página
@@ -129,7 +139,7 @@ function Dashboard({ onLogout }) {
         {view === 'claim' && (
           <ClaimPage chamado={chamado} onCancelar={() => setChamado(null)} onAbrirSOS={() => document.querySelector('[data-sos]')?.click()} />
         )}
-        {view === 'prefs' && <PreferencesPage />}
+        {view === 'prefs' && <PreferencesPage enderecoReq={enderecoReq} />}
       </main>
 
       {modalArea}

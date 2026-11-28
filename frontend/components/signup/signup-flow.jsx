@@ -3,7 +3,9 @@
 import { useRef, useState } from 'react'
 import { ArrowLeft, Check, CircleAlert, ShieldCheck } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { ENDERECO_INICIAL, validarEndereco } from '@/components/endereco/campos-endereco'
 import { StepAccount } from '@/components/signup/step-account'
+import { StepLocation } from '@/components/signup/step-location'
 import { StepReview } from '@/components/signup/step-review'
 import { authService } from '@/lib/api/services'
 import { useAuth } from '@/lib/auth-context'
@@ -19,11 +21,15 @@ const dadosIniciais = {
   senha: '',
   confirma: '',
   aceite: false,
+  endereco: ENDERECO_INICIAL,
 }
 
 const PASSO_CONTA = 1
-const PASSO_REVISAO = 2
+const PASSO_ENDERECO = 2
+const PASSO_REVISAO = 3
 const CAMPOS_CONTA = new Set(['nome', 'cpf', 'telefone', 'email', 'senha'])
+// mensagens 422 do backend que são sobre o endereço (cidade não atendida, rua, CEP...)
+const ERRO_DE_ENDERECO = /atendida|cep|rua|cidade|endereço/i
 
 function validar(passo, d) {
   const e = {}
@@ -35,20 +41,37 @@ function validar(passo, d) {
     if (d.senha.length < 8) e.senha = 'A senha precisa ter pelo menos 8 caracteres.'
     if (d.confirma !== d.senha || !d.confirma) e.confirma = 'As senhas não são iguais.'
   }
+  if (passo === PASSO_ENDERECO) {
+    const erros = validarEndereco(d.endereco)
+    if (Object.keys(erros).length > 0) e.endereco = erros
+  }
   if (passo === PASSO_REVISAO && !d.aceite) e.aceite = 'Aceite os termos para criar a conta.'
   return e
 }
 
-/** Traduz o erro da API para erros por campo (400 do @Valid ou 422 de duplicidade). */
+/**
+ * Traduz o erro da API para erros por campo (400 do @Valid ou 422 de regra).
+ * Erros do endereço chegam como "endereco.cep" (400) ou como mensagem de regra (422).
+ */
 function errosDaApi(erro) {
-  if (erro.campos) return Object.fromEntries(Object.entries(erro.campos).filter(([c]) => CAMPOS_CONTA.has(c)))
+  if (erro.campos) {
+    const conta = Object.fromEntries(Object.entries(erro.campos).filter(([c]) => CAMPOS_CONTA.has(c)))
+    const endereco = Object.fromEntries(
+      Object.entries(erro.campos)
+        .filter(([c]) => c.startsWith('endereco.'))
+        .map(([c, msg]) => [c.slice('endereco.'.length), msg]),
+    )
+    return Object.keys(endereco).length > 0 ? { ...conta, endereco } : conta
+  }
   if (erro.status === 422 && /e-mail/i.test(erro.message)) return { email: erro.message }
   if (erro.status === 422 && /cpf/i.test(erro.message)) return { cpf: erro.message }
+  if ((erro.status === 422 || erro.status === 503) && ERRO_DE_ENDERECO.test(erro.message))
+    return { endereco: { geral: erro.message } }
   return {}
 }
 
 function Progresso({ passo }) {
-  const etapas = ['Conta', 'Revisão']
+  const etapas = ['Conta', 'Endereço', 'Revisão']
   return (
     <div className="mb-6">
       <p className="mb-2 text-sm font-bold text-ink2">{`Passo ${passo} de ${etapas.length}`}</p>
@@ -101,6 +124,11 @@ export function SignupFlow({ onVoltarLogin }) {
     set,
     tocar,
     erroAceite: tentou ? erros.aceite : undefined,
+    errosEndereco: tentou || errosServidor.endereco ? (erros.endereco ?? {}) : {},
+    setEndereco: (patch) => {
+      setDados((d) => ({ ...d, endereco: { ...d.endereco, ...patch } }))
+      setErrosServidor(({ endereco: _, ...resto }) => resto)
+    },
     props: (campo, mascara) => ({
       value: dados[campo],
       error: mostrar(campo),
@@ -124,12 +152,14 @@ export function SignupFlow({ onVoltarLogin }) {
     setEnviando(true)
     setErroGeral('')
     try {
-      setCriado(await authService.cadastrar(dados))
+      const { endereco, ...conta } = dados
+      setCriado(await authService.cadastrar({ ...conta, endereco: endereco.modo === 'depois' ? null : endereco }))
     } catch (erro) {
       const porCampo = errosDaApi(erro)
       if (Object.keys(porCampo).length > 0) {
         setErrosServidor(porCampo)
-        irPara(PASSO_CONTA) // os campos com erro estão no passo da conta
+        // volta para o passo que tem o campo com erro
+        irPara(Object.keys(porCampo).some((c) => CAMPOS_CONTA.has(c)) ? PASSO_CONTA : PASSO_ENDERECO)
       } else {
         setErroGeral(erro.message ?? 'Não foi possível criar a conta. Tente novamente.')
       }
@@ -177,6 +207,7 @@ export function SignupFlow({ onVoltarLogin }) {
 
       <div className="rounded-2xl border-2 border-line bg-surface p-4 text-ink sm:p-6">
         {passo === PASSO_CONTA && <StepAccount form={form} />}
+        {passo === PASSO_ENDERECO && <StepLocation form={form} />}
         {passo === PASSO_REVISAO && <StepReview form={form} onEditar={irPara} />}
 
         {erroGeral && (
