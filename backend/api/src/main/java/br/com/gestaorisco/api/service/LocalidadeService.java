@@ -22,4 +22,11 @@ public class LocalidadeService {
         .map(LocalidadeResponse::from)
         .toList();
     }
+
+    // só as cidades cobertas pelo SafeZone (escolha de cidade no cadastro e no mapa)
+    public List<LocalidadeResponse> listarAtendidas(){
+        return repository.findByAtendidaTrueOrderByNome().stream()
+        .map(LocalidadeResponse::from)
+        .toList();
+    }
 }

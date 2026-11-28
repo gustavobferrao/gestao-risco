@@ -2,6 +2,7 @@ import { Home, LifeBuoy, TriangleAlert } from 'lucide-react'
 import { AlertList } from '@/components/alert-list'
 import { CriticalAlertCard } from '@/components/critical-alert-card'
 import { MetricCard } from '@/components/metric-card'
+import { LocalizacaoAviso } from '@/components/localizacao-aviso'
 import { RiskMap } from '@/components/risk-map'
 import { etapasChamado } from '@/lib/mock-data'
 import { googleMapsRotaUrl } from '@/lib/maps'
@@ -50,7 +51,10 @@ export function Overview({
     <div className="flex flex-col gap-5">
       <div>
         <h1 className="text-3xl font-extrabold">Visão geral</h1>
-        <p className="text-base text-ink2">São Paulo, SP · sua região agora</p>
+        <p className="text-base text-ink2">
+          {localizacao.cidade ? `${localizacao.cidade.nome}, ${localizacao.cidade.uf} · sua região agora` : 'Sua região agora'}
+        </p>
+        <LocalizacaoAviso localizacao={localizacao} className="mt-2" />
       </div>
 
       {critico && (

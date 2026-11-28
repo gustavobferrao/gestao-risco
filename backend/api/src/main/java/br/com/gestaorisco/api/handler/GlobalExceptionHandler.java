@@ -27,6 +27,7 @@ import br.com.gestaorisco.api.exception.AcessoNegadoException;
 import br.com.gestaorisco.api.exception.CredenciaisInvalidasException;
 import br.com.gestaorisco.api.exception.RecursoNaoEncontradoException;
 import br.com.gestaorisco.api.exception.RegraNegocioException;
+import br.com.gestaorisco.api.exception.ServicoExternoIndisponivelException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -93,6 +94,14 @@ public class GlobalExceptionHandler {
     ProblemDetail acessoNegado(AcessoNegadoException e){
         return ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN,
             mensagemOuPadrao(e, "Você não tem permissão para realizar esta operação.")
+        );
+    }
+
+    // ViaCEP (e futuramente INMET/Cemaden) fora do ar: 503, para a tela sugerir tentar de novo
+    @ExceptionHandler(ServicoExternoIndisponivelException.class)
+    ProblemDetail servicoExternoIndisponivel(ServicoExternoIndisponivelException e){
+        return ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE,
+            mensagemOuPadrao(e, "Um serviço externo não respondeu. Tente novamente em instantes.")
         );
     }
 

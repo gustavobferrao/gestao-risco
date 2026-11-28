@@ -72,7 +72,7 @@ class AreaRiscoControllerTest {
         var detalhe = new AreaRiscoDetalheResponse(1, "Morro do Socó", "Encosta com histórico de deslizamento",
                 Zona.URBANA, NivelRisco.ALTO, 1200,
                 new BigDecimal("-23.704500"), new BigDecimal("-46.783200"),
-                new LocalidadeResponse(1, "São Paulo", 12000000, new BigDecimal("1521.11")),
+                new LocalidadeResponse(1, "São Paulo", 12000000, new BigDecimal("1521.11"), "3550308", "SP", null, null, true),
                 List.of(), List.of(), List.of());
         when(areaRiscoService.detalhar(1)).thenReturn(detalhe);
 
